@@ -30,7 +30,6 @@ The first implementation supports:
 
 ```text
 .
-├── AGENTS.md
 ├── ROADMAP.md
 ├── README.md
 ├── pyproject.toml

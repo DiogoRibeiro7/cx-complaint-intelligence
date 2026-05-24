@@ -24,6 +24,7 @@ reports/*
 !data/interim/.gitkeep
 !data/processed/.gitkeep
 !reports/.gitkeep
+!reports/sample/
 
 # Notebooks
 .ipynb_checkpoints/

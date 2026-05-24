@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -103,13 +104,7 @@ class CFPBClient:
         while fetched < query.limit:
             current_size = min(query.page_size, query.limit - fetched)
             params = self._build_params(query=query, offset=offset, size=current_size)
-            response = self.session.get(
-                str(self.config.base_url),
-                params=params,
-                timeout=self.config.request_timeout_seconds,
-            )
-            self._raise_for_status(response)
-            page_records = self._extract_records(response.json())
+            page_records = self._fetch_page(params)
 
             if not page_records:
                 break
@@ -124,6 +119,36 @@ class CFPBClient:
                 break
 
             offset += len(page_records)
+
+    # Errors that can happen mid-response (after the HTTP status arrives) and
+    # therefore are not retried by the urllib3 HTTPAdapter we mount above.
+    _STREAMING_RETRIABLE: tuple[type[BaseException], ...] = (
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ReadTimeout,
+        requests.exceptions.ConnectionError,
+    )
+
+    def _fetch_page(self, params: Mapping[str, str | int | bool]) -> list[JsonRecord]:
+        """GET one page of results, retrying on transient body-read errors."""
+        last_error: BaseException | None = None
+        attempts = self.config.max_retries + 1
+        for attempt in range(attempts):
+            try:
+                response = self.session.get(
+                    str(self.config.base_url),
+                    params=params,
+                    timeout=self.config.request_timeout_seconds,
+                )
+                self._raise_for_status(response)
+                return self._extract_records(response.json())
+            except self._STREAMING_RETRIABLE as exc:
+                last_error = exc
+                if attempt == attempts - 1:
+                    break
+                sleep_for = self.config.retry_backoff_seconds * (2**attempt)
+                time.sleep(sleep_for)
+        msg = f"CFPB API page fetch failed after {attempts} attempts: {last_error}"
+        raise RuntimeError(msg) from last_error
 
     def _build_params(self, query: CFPBQuery, offset: int, size: int) -> dict[str, str | int | bool]:
         """Build query parameters for the API request."""

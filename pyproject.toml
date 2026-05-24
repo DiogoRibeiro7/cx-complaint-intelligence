@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "cx-complaint-intelligence"
+version = "0.1.0"
+description = "Customer Experience complaint intelligence platform using CFPB consumer complaint data."
+authors = ["Diogo Ribeiro <hansolo.dj@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "cx_complaints", from = "src" }]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+pandas = ">=2.2.0,<3.0.0"
+numpy = ">=1.26.0,<3.0.0"
+requests = ">=2.31.0,<3.0.0"
+scikit-learn = ">=1.4.0,<2.0.0"
+scipy = ">=1.11.0,<2.0.0"
+click = ">=8.1.7,<9.0.0"
+rich = ">=13.7.0,<14.0.0"
+pydantic = ">=2.6.0,<3.0.0"
+python-dateutil = ">=2.9.0,<3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0,<9.0.0"
+pytest-cov = ">=5.0.0,<6.0.0"
+ruff = ">=0.4.0,<1.0.0"
+mypy = ">=1.10.0,<2.0.0"
+types-requests = ">=2.31.0,<3.0.0"
+
+[tool.poetry.scripts]
+cx-complaints = "cx_complaints.cli:main"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "ANN", "C4", "SIM"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=cx_complaints --cov-report=term-missing"
+testpaths = ["tests"]

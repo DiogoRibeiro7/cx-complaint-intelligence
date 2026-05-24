@@ -17,7 +17,9 @@ class ProjectConfig(BaseModel):
     raw_data_dir: Path = Path("data/raw")
     processed_data_dir: Path = Path("data/processed")
     reports_dir: Path = Path("reports")
-    request_timeout_seconds: int = Field(default=30, ge=1)
+    request_timeout_seconds: int = Field(default=60, ge=1)
+    max_retries: int = Field(default=5, ge=0)
+    retry_backoff_seconds: float = Field(default=1.0, ge=0)
 
     @field_validator("raw_data_dir", "processed_data_dir", "reports_dir")
     @classmethod

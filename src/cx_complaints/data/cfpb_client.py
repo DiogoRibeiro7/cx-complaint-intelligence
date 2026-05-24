@@ -9,6 +9,8 @@ from typing import Any
 import pandas as pd
 import requests
 from requests import Response, Session
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from cx_complaints.config import ProjectConfig
 from cx_complaints.data.schema import normalize_complaints
@@ -55,7 +57,26 @@ class CFPBClient:
 
     def __init__(self, config: ProjectConfig | None = None, session: Session | None = None) -> None:
         self.config = config or ProjectConfig()
-        self.session = session or requests.Session()
+        self.session = session or self._build_session(self.config)
+
+    @staticmethod
+    def _build_session(config: ProjectConfig) -> Session:
+        """Build a requests Session with retry/backoff for transient errors."""
+        session = requests.Session()
+        retry = Retry(
+            total=config.max_retries,
+            connect=config.max_retries,
+            read=config.max_retries,
+            status=config.max_retries,
+            backoff_factor=config.retry_backoff_seconds,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET",),
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
 
     def fetch(self, query: CFPBQuery) -> pd.DataFrame:
         """Fetch complaints and return a normalised DataFrame.

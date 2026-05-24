@@ -106,6 +106,12 @@ reports/sample/
 └── product_summary.csv
 ```
 
+## Example report
+
+A pre-computed report from 1,000 June 2024 complaints with consumer narratives is checked into the repo under [reports/sample/](reports/sample/). The headline [executive_summary.md](reports/sample/executive_summary.md) covers top products, issues, companies, discovered topics, and recommended next actions.
+
+The per-complaint `complaint_scores.csv` is intentionally not committed: it carries raw consumer narratives, and the data ethics note below applies. Regenerate it locally with the `analyze` command above.
+
 ## Main modelling choices
 
 ### Topic modelling

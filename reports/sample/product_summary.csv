@@ -1,0 +1,12 @@
+product,complaints,average_risk_score,high_risk_share
+Credit reporting or other personal consumer reports,793,3.58,14.6
+Debt collection,77,3.81,15.6
+Credit card,43,2.28,2.3
+Checking or savings account,40,1.99,0.0
+Mortgage,13,3.63,15.4
+Student loan,11,1.91,0.0
+"Payday loan, title loan, personal loan, or advance loan",9,4.11,33.3
+"Money transfer, virtual currency, or money service",7,3.43,28.6
+Vehicle loan or lease,4,1.81,0.0
+Prepaid card,2,2.38,0.0
+Debt or credit management,1,4.0,0.0

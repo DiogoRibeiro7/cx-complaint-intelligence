@@ -25,6 +25,8 @@ reports/*
 !data/processed/.gitkeep
 !reports/.gitkeep
 !reports/sample/
+# Per-complaint scores contain raw narratives — keep out of the repo.
+reports/sample/complaint_scores.csv
 
 # Notebooks
 .ipynb_checkpoints/

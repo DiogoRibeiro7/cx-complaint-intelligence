@@ -61,6 +61,25 @@ def test_fetch_page_retries_on_chunked_encoding_error() -> None:
     assert records == [{"complaint_id": "1"}]
 
 
+def test_extract_records_unwraps_source_in_top_level_list() -> None:
+    payload = [
+        {
+            "_index": "complaint-public-v1",
+            "_id": "9316329",
+            "_source": {"complaint_id": "9316329", "product": "Credit card"},
+            "sort": [57],
+        },
+        {"_source": {"complaint_id": "9316330", "product": "Mortgage"}},
+    ]
+
+    records = CFPBClient._extract_records(payload)
+
+    assert records == [
+        {"complaint_id": "9316329", "product": "Credit card"},
+        {"complaint_id": "9316330", "product": "Mortgage"},
+    ]
+
+
 def test_fetch_page_gives_up_after_max_retries() -> None:
     config = ProjectConfig(max_retries=2, retry_backoff_seconds=0)
     session = _FakeSession(

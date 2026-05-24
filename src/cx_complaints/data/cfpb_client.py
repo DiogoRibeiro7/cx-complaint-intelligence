@@ -195,30 +195,27 @@ class CFPBClient:
     def _extract_records(payload: Any) -> list[JsonRecord]:
         """Extract records from known CFPB API response shapes."""
         if isinstance(payload, list):
-            return [item for item in payload if isinstance(item, dict)]
+            return [CFPBClient._unwrap_source(item) for item in payload if isinstance(item, dict)]
 
         if not isinstance(payload, dict):
             return []
 
         if isinstance(payload.get("hits"), dict):
             raw_hits = payload["hits"].get("hits", [])
-            records: list[JsonRecord] = []
-            for item in raw_hits:
-                if not isinstance(item, dict):
-                    continue
-                source = item.get("_source")
-                if isinstance(source, dict):
-                    records.append(source)
-                else:
-                    records.append(item)
-            return records
+            return [CFPBClient._unwrap_source(item) for item in raw_hits if isinstance(item, dict)]
 
         for key in ("results", "data", "complaints"):
             value = payload.get(key)
             if isinstance(value, list):
-                return [item for item in value if isinstance(item, dict)]
+                return [CFPBClient._unwrap_source(item) for item in value if isinstance(item, dict)]
 
         return []
+
+    @staticmethod
+    def _unwrap_source(item: JsonRecord) -> JsonRecord:
+        """Return the inner ``_source`` document if present, otherwise the item as-is."""
+        source = item.get("_source")
+        return source if isinstance(source, dict) else item
 
 
 def save_complaints_csv(frame: pd.DataFrame, output_path: str) -> None:

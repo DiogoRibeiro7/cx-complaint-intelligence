@@ -126,6 +126,25 @@ reports/sample/eda/
 └── timely_response_share.png
 ```
 
+## Notebook analysis
+
+The repository includes a polished analysis notebook at
+`notebooks/01_complaint_intelligence_analysis.ipynb`.
+
+Run Jupyter from the project root after installing dependencies:
+
+```bash
+poetry run jupyter notebook
+```
+
+Inside the notebook, load `data/raw/cfpb_sample.csv` and execute sections for:
+
+- KPI snapshot;
+- concentration by product/issue/company;
+- monthly trend and risk trend;
+- response-quality and risk distribution;
+- evidence-based recommendations.
+
 ## Example report
 
 A pre-computed report from 1,000 June 2024 complaints with consumer narratives is checked into the repo under [reports/sample/](reports/sample/). The headline [executive_summary.md](reports/sample/executive_summary.md) covers top products, issues, companies, discovered topics, and recommended next actions.
@@ -154,6 +173,16 @@ The first version uses a transparent heuristic score. It combines:
 
 This is deliberately interpretable. In future versions, the score can become a calibrated supervised model.
 
+### Supervised modelling scaffolding
+
+The repository now includes reusable utilities for supervised model development:
+
+- chronological train/test splitting (`time_aware_train_test_split`);
+- class imbalance summaries (`summarize_class_imbalance`);
+- standard binary metrics (`evaluate_binary_classifier`) with precision, recall, F1, and optional ROC-AUC.
+
+These live in `src/cx_complaints/modelling/supervised.py` and are intended as the foundation for upcoming logistic regression and linear-SVM baselines.
+
 ## Example output
 
 The executive summary is designed for a business audience. It focuses on:
@@ -171,9 +200,3 @@ The executive summary is designed for a business audience. It focuses on:
 Complaint narratives may contain sensitive situations even after CFPB scrubbing. Do not attempt to re-identify consumers. Do not use the project to rank individuals. Company comparisons should be normalised by market share or customer base before making public claims.
 
 The risk score is not a legal or regulatory judgement. It is a prioritisation signal for analysis.
-
-## Suggested portfolio story
-
-A good article or README narrative would be:
-
-> I built a complaint intelligence platform that turns public consumer complaints into a prioritisation system for CX, compliance, and operations teams. The project combines data ingestion, NLP, topic discovery, interpretable risk scoring, and executive reporting.

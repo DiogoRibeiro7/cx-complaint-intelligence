@@ -135,7 +135,12 @@ It also includes:
 - `notebooks/02_topic_deep_dive.ipynb`;
 - `notebooks/03_supervised_baseline_preparation.ipynb`;
 - `notebooks/04_model_comparison_and_thresholds.ipynb`;
-- `notebooks/05_company_risk_benchmarking.ipynb`.
+- `notebooks/05_company_risk_benchmarking.ipynb`;
+- `notebooks/06_topic_trend_monitoring.ipynb`;
+- `notebooks/07_data_quality_and_schema_audit.ipynb`;
+- `notebooks/08_response_quality_and_operational_playbook.ipynb`;
+- `notebooks/09_weekly_monitoring_scorecard.ipynb`;
+- `notebooks/10_executive_brief_generator.ipynb`.
 
 Run Jupyter from the project root after installing dependencies:
 

@@ -130,6 +130,12 @@ reports/sample/eda/
 
 The repository includes a polished analysis notebook at
 `notebooks/01_complaint_intelligence_analysis.ipynb`.
+It also includes:
+
+- `notebooks/02_topic_deep_dive.ipynb`;
+- `notebooks/03_supervised_baseline_preparation.ipynb`;
+- `notebooks/04_model_comparison_and_thresholds.ipynb`;
+- `notebooks/05_company_risk_benchmarking.ipynb`.
 
 Run Jupyter from the project root after installing dependencies:
 
@@ -182,6 +188,12 @@ The repository now includes reusable utilities for supervised model development:
 - standard binary metrics (`evaluate_binary_classifier`) with precision, recall, F1, and optional ROC-AUC.
 
 These live in `src/cx_complaints/modelling/supervised.py` and are intended as the foundation for upcoming logistic regression and linear-SVM baselines.
+
+The baseline model runners are now available in
+`src/cx_complaints/modelling/baselines.py`:
+
+- `run_text_baseline_models` for logistic regression and linear SVM over TF-IDF text;
+- `baseline_metrics_table` for report-ready model metric comparisons.
 
 ## Example output
 

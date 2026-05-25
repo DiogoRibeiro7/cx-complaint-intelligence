@@ -106,6 +106,26 @@ reports/sample/
 └── product_summary.csv
 ```
 
+## Generate EDA charts
+
+```bash
+poetry run cx-complaints eda \
+  --input data/raw/cfpb_sample.csv \
+  --output-dir reports/sample/eda \
+  --top-n 10
+```
+
+The command creates:
+
+```text
+reports/sample/eda/
+├── product_share.png
+├── issue_share.png
+├── monthly_volume_trend.png
+├── risk_distribution.png
+└── timely_response_share.png
+```
+
 ## Example report
 
 A pre-computed report from 1,000 June 2024 complaints with consumer narratives is checked into the repo under [reports/sample/](reports/sample/). The headline [executive_summary.md](reports/sample/executive_summary.md) covers top products, issues, companies, discovered topics, and recommended next actions.

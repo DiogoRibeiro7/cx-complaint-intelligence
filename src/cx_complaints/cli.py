@@ -14,6 +14,7 @@ from cx_complaints.features.text_features import add_text_features
 from cx_complaints.modelling.risk import score_complaint_risk
 from cx_complaints.nlp.topics import fit_nmf_topics
 from cx_complaints.preprocessing.text import add_clean_text_column
+from cx_complaints.reports.eda import write_eda_charts
 from cx_complaints.reports.summary import write_report_outputs
 
 console = Console()
@@ -121,6 +122,28 @@ def analyze(
     )
 
     console.print(f"[green]Analysis complete. Outputs written to {output_dir}[/green]")
+
+
+@main.command()
+@click.option("--input", "input_path", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--output-dir", required=True, type=click.Path(path_type=Path))
+@click.option("--top-n", default=10, show_default=True, type=int)
+def eda(input_path: Path, output_dir: Path, top_n: int) -> None:
+    """Generate exploratory analysis charts from complaint records."""
+    frame = pd.read_csv(input_path)
+    complaints = normalize_complaints(frame)
+
+    if "risk_level" not in complaints.columns or "risk_score" not in complaints.columns:
+        complaints = add_clean_text_column(complaints)
+        complaints = add_text_features(complaints)
+        complaints = score_complaint_risk(complaints)
+
+    write_eda_charts(
+        frame=complaints,
+        output_dir=output_dir,
+        top_n=top_n,
+    )
+    console.print(f"[green]EDA charts written to {output_dir}[/green]")
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ Goal: create a polished analytical notebook or article.
 - [ ] Compare complaint volume by product, issue, state, and company.
 - [ ] Analyse trends over time.
 - [ ] Analyse response quality and timely-response patterns.
-- [ ] Add charts for product share, issue share, monthly trends, and risk distribution.
+- [x] Add charts for product share, issue share, monthly trends, and risk distribution.
 - [ ] Write an executive narrative with business recommendations.
 
 Suggested deliverable:

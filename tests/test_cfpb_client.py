@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 import requests
 
@@ -12,11 +10,14 @@ from cx_complaints.data.cfpb_client import CFPBClient
 class _FakeSession:
     """Session double that scripts a sequence of behaviours per call."""
 
-    def __init__(self, behaviours: list[Any]) -> None:
+    def __init__(
+        self,
+        behaviours: list[BaseException | _FakeResponse],
+    ) -> None:
         self._behaviours = list(behaviours)
         self.calls = 0
 
-    def get(self, *_args: Any, **_kwargs: Any) -> Any:
+    def get(self, *_args: object, **_kwargs: object) -> _FakeResponse:
         self.calls += 1
         if not self._behaviours:
             raise AssertionError("FakeSession ran out of scripted behaviours")
@@ -27,12 +28,12 @@ class _FakeSession:
 
 
 class _FakeResponse:
-    def __init__(self, payload: dict[str, Any], status_code: int = 200) -> None:
+    def __init__(self, payload: dict[str, object], status_code: int = 200) -> None:
         self._payload = payload
         self.status_code = status_code
         self.text = ""
 
-    def json(self) -> dict[str, Any]:
+    def json(self) -> dict[str, object]:
         return self._payload
 
     def raise_for_status(self) -> None:
@@ -40,7 +41,7 @@ class _FakeResponse:
             raise requests.HTTPError(f"status {self.status_code}")
 
 
-def _hits(records: list[dict[str, Any]]) -> dict[str, Any]:
+def _hits(records: list[dict[str, object]]) -> dict[str, object]:
     return {"hits": {"hits": [{"_source": r} for r in records]}}
 
 

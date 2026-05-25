@@ -74,9 +74,18 @@ def score_complaint_risk(frame: pd.DataFrame) -> pd.DataFrame:
     score += issue_text.map(_contains_high_risk_issue).astype(float) * 1.5
     score += response.map(_looks_like_weak_response).astype(float) * 0.75
     score += tags.map(_contains_vulnerable_tag).astype(float) * 1.0
-    score += pd.to_numeric(output["urgency_term_count"], errors="coerce").fillna(0).clip(0, 3) * 0.75
+    score += (
+        pd.to_numeric(output["urgency_term_count"], errors="coerce")
+        .fillna(0)
+        .clip(0, 3)
+        * 0.75
+    )
     score += output["has_money_language"].fillna(False).astype(bool).astype(float) * 0.5
-    score += (pd.to_numeric(output["word_count"], errors="coerce").fillna(0) >= 250).astype(float) * 0.5
+    score += (
+        (pd.to_numeric(output["word_count"], errors="coerce").fillna(0) >= 250)
+        .astype(float)
+        * 0.5
+    )
 
     output["risk_score"] = score.round(2)
     output["risk_level"] = output["risk_score"].map(risk_level_from_score)

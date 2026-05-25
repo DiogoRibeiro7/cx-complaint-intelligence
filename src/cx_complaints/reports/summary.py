@@ -65,8 +65,11 @@ def build_executive_summary(
         f"- High-risk complaints: **{high_risk:,}** ({high_risk_share:.1f}%).",
         f"- Medium or high-risk complaints: **{medium_or_high:,}**.",
         "",
-        "The risk score is an interpretable prioritisation signal. It combines response timeliness, "
-        "product and issue risk, urgency language, monetary language, narrative length, and CFPB tags.",
+        (
+            "The risk score is an interpretable prioritisation signal. "
+            "It combines response timeliness, product and issue risk, urgency language, "
+            "monetary language, narrative length, and CFPB tags."
+        ),
         "",
     ]
 
@@ -80,17 +83,35 @@ def build_executive_summary(
         [
             "## Recommended next actions",
             "",
-            "1. Review high-risk complaints first and validate whether the score aligns with analyst judgement.",
-            "2. Use topic groups to identify recurring process failures, not only isolated customer issues.",
-            "3. Compare companies only after normalising by exposure, customer base, or complaint volume context.",
+            (
+                "1. Review high-risk complaints first and validate whether the score "
+                "aligns with analyst judgement."
+            ),
+            (
+                "2. Use topic groups to identify recurring process failures, "
+                "not only isolated customer issues."
+            ),
+            (
+                "3. Compare companies only after normalising by exposure, customer base, "
+                "or complaint volume context."
+            ),
             "4. Track topic and issue trends over time to detect emerging customer harm earlier.",
-            "5. Convert validated high-risk labels into a supervised model once enough reviewed examples exist.",
+            (
+                "5. Convert validated high-risk labels into a supervised model "
+                "once enough reviewed examples exist."
+            ),
             "",
             "## Limitations",
             "",
-            "- The score is heuristic and should not be interpreted as a legal or regulatory judgement.",
+            (
+                "- The score is heuristic and should not be interpreted as a legal "
+                "or regulatory judgement."
+            ),
             "- CFPB narratives are available only when consumers consent to publication.",
-            "- Company comparisons require external normalisation before strong conclusions are made.",
+            (
+                "- Company comparisons require external normalisation before strong "
+                "conclusions are made."
+            ),
         ]
     )
 

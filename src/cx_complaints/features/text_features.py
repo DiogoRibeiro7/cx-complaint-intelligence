@@ -24,7 +24,10 @@ URGENCY_TERMS = (
     "illegal",
 )
 
-MONEY_PATTERN = re.compile(r"\[MONEY\]|\$|dollar|dollars|fee|fees|charge|charged|refund", re.IGNORECASE)
+MONEY_PATTERN = re.compile(
+    r"\[MONEY\]|\$|dollar|dollars|fee|fees|charge|charged|refund",
+    re.IGNORECASE,
+)
 
 
 def add_text_features(frame: pd.DataFrame, text_column: str = "clean_text") -> pd.DataFrame:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
@@ -11,7 +12,10 @@ class ProjectConfig(BaseModel):
     """Configuration for local project paths and API access."""
 
     base_url: HttpUrl = Field(
-        default="https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/",
+        default=cast(
+            HttpUrl,
+            "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/",
+        ),
         description="Base URL for the CFPB Consumer Complaint Database API.",
     )
     raw_data_dir: Path = Path("data/raw")

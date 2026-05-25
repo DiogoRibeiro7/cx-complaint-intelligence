@@ -32,8 +32,18 @@ def main() -> None:
 @click.option("--product", default=None, type=str)
 @click.option("--company", default=None, type=str)
 @click.option("--state", default=None, type=str)
-@click.option("--date-min", default=None, type=str, help="Minimum date_received, for example 2024-01-01.")
-@click.option("--date-max", default=None, type=str, help="Maximum date_received, for example 2024-12-31.")
+@click.option(
+    "--date-min",
+    default=None,
+    type=str,
+    help="Minimum date_received, for example 2024-01-01.",
+)
+@click.option(
+    "--date-max",
+    default=None,
+    type=str,
+    help="Maximum date_received, for example 2024-12-31.",
+)
 @click.option("--search-term", default=None, type=str)
 def fetch(
     output_path: Path,

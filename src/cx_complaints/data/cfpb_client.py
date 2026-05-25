@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from typing import Any
 
 import pandas as pd
 import requests
@@ -16,7 +15,9 @@ from urllib3.util.retry import Retry
 from cx_complaints.config import ProjectConfig
 from cx_complaints.data.schema import normalize_complaints
 
-JsonRecord = dict[str, Any]
+JsonPrimitive = str | int | float | bool | None
+JsonValue = JsonPrimitive | dict[str, "JsonValue"] | list["JsonValue"]
+JsonRecord = dict[str, JsonValue]
 
 
 @dataclass(frozen=True)
@@ -150,7 +151,12 @@ class CFPBClient:
         msg = f"CFPB API page fetch failed after {attempts} attempts: {last_error}"
         raise RuntimeError(msg) from last_error
 
-    def _build_params(self, query: CFPBQuery, offset: int, size: int) -> dict[str, str | int | bool]:
+    def _build_params(
+        self,
+        query: CFPBQuery,
+        offset: int,
+        size: int,
+    ) -> dict[str, str | int | bool]:
         """Build query parameters for the API request."""
         params: dict[str, str | int | bool] = {
             "format": "json",
@@ -188,11 +194,14 @@ class CFPBClient:
         try:
             response.raise_for_status()
         except requests.HTTPError as exc:
-            msg = f"CFPB API request failed with status {response.status_code}: {response.text[:500]}"
+            msg = (
+                "CFPB API request failed with status "
+                f"{response.status_code}: {response.text[:500]}"
+            )
             raise RuntimeError(msg) from exc
 
     @staticmethod
-    def _extract_records(payload: Any) -> list[JsonRecord]:
+    def _extract_records(payload: object) -> list[JsonRecord]:
         """Extract records from known CFPB API response shapes."""
         if isinstance(payload, list):
             return [CFPBClient._unwrap_source(item) for item in payload if isinstance(item, dict)]

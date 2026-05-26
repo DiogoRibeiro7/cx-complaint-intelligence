@@ -126,6 +126,19 @@ reports/sample/eda/
 └── timely_response_share.png
 ```
 
+## Validate data quality
+
+```bash
+poetry run cx-complaints validate \
+  --input data/raw/cfpb_sample.csv \
+  --min-narrative-share 0.2 \
+  --max-missing-date-share 0.05
+```
+
+This command checks schema conformance, duplicate complaint IDs, missing
+`date_received` share, and narrative coverage. It fails with non-zero exit when
+failing checks are detected unless `--no-fail-on-error` is passed.
+
 ## Notebook analysis
 
 The repository includes a polished analysis notebook at
@@ -217,3 +230,18 @@ The executive summary is designed for a business audience. It focuses on:
 Complaint narratives may contain sensitive situations even after CFPB scrubbing. Do not attempt to re-identify consumers. Do not use the project to rank individuals. Company comparisons should be normalised by market share or customer base before making public claims.
 
 The risk score is not a legal or regulatory judgement. It is a prioritisation signal for analysis.
+
+## DuckDB analytics storage
+
+DuckDB support is available for local analytical tables in
+`src/cx_complaints/data/duckdb_store.py`.
+
+Example usage:
+
+```python
+from cx_complaints.data.duckdb_store import DuckDBStore
+
+store = DuckDBStore("data/analytics/complaints.duckdb")
+store.write_dataframe(frame=complaints_df, table_name="complaints", if_exists="replace")
+summary = store.query("SELECT product, count(*) AS complaints FROM complaints GROUP BY product")
+```

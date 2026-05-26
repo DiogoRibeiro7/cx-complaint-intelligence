@@ -10,6 +10,7 @@ from rich.console import Console
 
 from cx_complaints.data.cfpb_client import CFPBClient, CFPBQuery, save_complaints_csv
 from cx_complaints.data.schema import normalize_complaints
+from cx_complaints.data.validation import validate_complaints_frame
 from cx_complaints.features.text_features import add_text_features
 from cx_complaints.modelling.risk import score_complaint_risk
 from cx_complaints.nlp.topics import fit_nmf_topics
@@ -144,6 +145,38 @@ def eda(input_path: Path, output_dir: Path, top_n: int) -> None:
         top_n=top_n,
     )
     console.print(f"[green]EDA charts written to {output_dir}[/green]")
+
+
+@main.command()
+@click.option("--input", "input_path", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--min-narrative-share", default=0.2, show_default=True, type=float)
+@click.option("--max-missing-date-share", default=0.05, show_default=True, type=float)
+@click.option("--fail-on-error/--no-fail-on-error", default=True, show_default=True)
+def validate(
+    input_path: Path,
+    min_narrative_share: float,
+    max_missing_date_share: float,
+    fail_on_error: bool,
+) -> None:
+    """Validate complaint dataset quality and schema conformance."""
+    raw = pd.read_csv(input_path)
+    complaints = normalize_complaints(raw)
+    report = validate_complaints_frame(
+        complaints,
+        min_narrative_share=min_narrative_share,
+        max_missing_date_share=max_missing_date_share,
+    )
+
+    report_frame = report.to_frame()
+    console.print(report_frame.to_markdown(index=False))
+
+    if fail_on_error and report.has_failures:
+        raise click.ClickException("Validation failed. One or more checks returned status=fail.")
+
+    if report.has_failures:
+        console.print("[yellow]Validation completed with failures (not enforced).[/yellow]")
+    else:
+        console.print("[green]Validation passed with no failing checks.[/green]")
 
 
 if __name__ == "__main__":

@@ -127,8 +127,8 @@ Goal: turn the project into a repeatable pipeline.
 
 - [ ] Add incremental ingestion.
 - [ ] Store raw API responses separately from cleaned analytical tables.
-- [ ] Add DuckDB support for local analytics.
-- [ ] Add data validation checks.
+- [x] Add DuckDB support for local analytics.
+- [x] Add data validation checks.
 - [ ] Add pipeline metadata.
 - [ ] Add GitHub Actions scheduled runs.
 - [ ] Add artifact publishing for reports.

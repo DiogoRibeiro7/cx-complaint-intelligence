@@ -149,3 +149,62 @@ def test_eda_command_runs_and_calls_chart_writer(
     assert "risk_level" in frame.columns
     assert captured["output_dir"] == output_dir
     assert captured["top_n"] == 7
+
+
+def test_validate_command_fails_on_failing_checks(tmp_path: Path) -> None:
+    input_path = tmp_path / "input.csv"
+    pd.DataFrame(
+        {
+            "Complaint ID": [1, 2],
+            "Date received": ["bad-date", "also-bad"],
+            "Product": ["Credit card", "Mortgage"],
+            "Issue": ["Billing disputes", "Foreclosure"],
+            "Timely response?": ["Yes", "No"],
+            "has_narrative": ["no", "no"],
+        }
+    ).to_csv(input_path, index=False)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.main,
+        [
+            "validate",
+            "--input",
+            str(input_path),
+            "--min-narrative-share",
+            "0.5",
+            "--max-missing-date-share",
+            "0.1",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Validation failed" in result.output
+
+
+def test_validate_command_can_skip_failure_exit(tmp_path: Path) -> None:
+    input_path = tmp_path / "input.csv"
+    pd.DataFrame(
+        {
+            "Complaint ID": [1, 2],
+            "Date received": ["bad-date", "also-bad"],
+            "Product": ["Credit card", "Mortgage"],
+            "Issue": ["Billing disputes", "Foreclosure"],
+            "Timely response?": ["Yes", "No"],
+            "has_narrative": ["no", "no"],
+        }
+    ).to_csv(input_path, index=False)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.main,
+        [
+            "validate",
+            "--input",
+            str(input_path),
+            "--no-fail-on-error",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "not enforced" in result.output

@@ -160,7 +160,7 @@ Goal: make the project maintainable and credible.
 
 - [ ] Add full documentation site.
 - [ ] Add API reference.
-- [ ] Add CI with ruff, mypy, pytest, coverage, and security checks.
+- [x] Add CI with ruff, mypy, pytest, coverage, and security checks.
 - [ ] Add Dockerfile.
 - [ ] Add Makefile or task runner.
 - [ ] Add release workflow.

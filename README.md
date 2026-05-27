@@ -194,6 +194,26 @@ Inside the notebook, load `data/raw/cfpb_sample.csv` and execute sections for:
 - response-quality and risk distribution;
 - evidence-based recommendations.
 
+See [notebooks/README.md](notebooks/README.md) for the full suite description.
+
+## Streamlit dashboard
+
+An interactive companion to the notebooks lives under [src/cx_complaints/dashboard/](src/cx_complaints/dashboard/). Launch it after `analyze` has produced `reports/sample/`:
+
+```bash
+poetry run streamlit run src/cx_complaints/dashboard/app.py
+```
+
+The dashboard has five pages:
+
+- **Overview** — headline KPIs, monthly trend, risk-score distribution.
+- **Concentration** — top products, issues, and companies with a minimum-volume guardrail.
+- **Topics** — topic leaderboard, volume-vs-risk bubble chart, deep-dive sampling.
+- **Priority Queue** — filterable high-risk + untimely + weak-response queue with CSV download.
+- **Weekly Brief** — live weekly KPIs, WoW deltas, and the auto-generated executive brief.
+
+The data-loading layer (cached) and the pure aggregation helpers (`apply_filters`, `priority_queue`, `weekly_kpis`, `week_over_week`, `topic_weekly_movement`, `build_executive_brief`) are testable in isolation and shared across the pages.
+
 ## Example report
 
 A pre-computed report from 1,000 June 2024 complaints with consumer narratives is checked into the repo under [reports/sample/](reports/sample/). The headline [executive_summary.md](reports/sample/executive_summary.md) covers top products, issues, companies, discovered topics, and recommended next actions.

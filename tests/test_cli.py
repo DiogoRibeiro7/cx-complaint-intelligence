@@ -8,6 +8,7 @@ import pytest
 from click.testing import CliRunner
 
 from cx_complaints import cli
+from cx_complaints.pipeline.manifest import RunManifest
 
 
 @dataclass(frozen=True)
@@ -66,8 +67,14 @@ def test_analyze_command_runs_and_writes_outputs(
         captured["topic_terms"] = topic_terms
         captured["output_dir"] = Path(output_dir)
 
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
     monkeypatch.setattr(cli, "fit_nmf_topics", fake_fit_nmf_topics)
     monkeypatch.setattr(cli, "write_report_outputs", fake_write_report_outputs)
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -97,6 +104,11 @@ def test_analyze_command_runs_and_writes_outputs(
     assert "topic_score" in frame.columns
     assert frame["topic_id"].dtype.name == "Int64"
     assert captured["output_dir"] == output_dir
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.command == "analyze"
+    assert manifest.input_rows == 2
+    assert captured["manifest_output_path"] == output_dir / "run_manifest.json"
 
 
 def test_eda_command_runs_and_calls_chart_writer(
@@ -123,7 +135,13 @@ def test_eda_command_runs_and_calls_chart_writer(
         captured["output_dir"] = Path(output_dir)
         captured["top_n"] = top_n
 
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
     monkeypatch.setattr(cli, "write_eda_charts", fake_write_eda_charts)
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -149,9 +167,17 @@ def test_eda_command_runs_and_calls_chart_writer(
     assert "risk_level" in frame.columns
     assert captured["output_dir"] == output_dir
     assert captured["top_n"] == 7
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.command == "eda"
+    assert manifest.parameters["top_n"] == 7
+    assert captured["manifest_output_path"] == output_dir / "run_manifest.json"
 
 
-def test_validate_command_fails_on_failing_checks(tmp_path: Path) -> None:
+def test_validate_command_fails_on_failing_checks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     input_path = tmp_path / "input.csv"
     pd.DataFrame(
         {
@@ -163,6 +189,15 @@ def test_validate_command_fails_on_failing_checks(tmp_path: Path) -> None:
             "has_narrative": ["no", "no"],
         }
     ).to_csv(input_path, index=False)
+
+    captured: dict[str, object] = {}
+
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -180,9 +215,18 @@ def test_validate_command_fails_on_failing_checks(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "Validation failed" in result.output
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.command == "validate"
+    assert manifest.validation_status == "fail"
+    assert manifest.validation_failures > 0
+    assert captured["manifest_output_path"] == Path("reports") / "validation" / "run_manifest.json"
 
 
-def test_validate_command_can_skip_failure_exit(tmp_path: Path) -> None:
+def test_validate_command_can_skip_failure_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     input_path = tmp_path / "input.csv"
     pd.DataFrame(
         {
@@ -194,6 +238,15 @@ def test_validate_command_can_skip_failure_exit(tmp_path: Path) -> None:
             "has_narrative": ["no", "no"],
         }
     ).to_csv(input_path, index=False)
+
+    captured: dict[str, object] = {}
+
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -208,3 +261,7 @@ def test_validate_command_can_skip_failure_exit(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "not enforced" in result.output
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.command == "validate"
+    assert manifest.validation_status == "fail"

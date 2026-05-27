@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -14,6 +15,8 @@ from cx_complaints.data.validation import validate_complaints_frame
 from cx_complaints.features.text_features import add_text_features
 from cx_complaints.modelling.risk import score_complaint_risk
 from cx_complaints.nlp.topics import fit_nmf_topics
+from cx_complaints.pipeline.manifest import ValidationStatus
+from cx_complaints.pipeline.metadata import build_run_manifest, write_run_manifest
 from cx_complaints.preprocessing.text import add_clean_text_column
 from cx_complaints.reports.eda import write_eda_charts
 from cx_complaints.reports.summary import write_report_outputs
@@ -94,6 +97,7 @@ def analyze(
     max_features: int,
 ) -> None:
     """Run the full complaint intelligence analysis pipeline."""
+    started_at = datetime.now(timezone.utc)
     raw = pd.read_csv(input_path)
     complaints = normalize_complaints(raw)
     complaints = add_clean_text_column(complaints)
@@ -121,6 +125,30 @@ def analyze(
         topic_terms=topic_result.topic_terms,
         output_dir=output_dir,
     )
+    finished_at = datetime.now(timezone.utc)
+    manifest = build_run_manifest(
+        command="analyze",
+        started_at=started_at,
+        finished_at=finished_at,
+        input_path=input_path,
+        input_rows=len(raw),
+        output_rows=len(complaints),
+        parameters={
+            "topics": n_topics,
+            "min_df": min_df,
+            "max_features": max_features,
+        },
+        output_paths=[
+            output_dir / "complaint_scores.csv",
+            output_dir / "topic_terms.csv",
+            output_dir / "product_summary.csv",
+            output_dir / "issue_summary.csv",
+            output_dir / "company_summary.csv",
+            output_dir / "topic_distribution.csv",
+            output_dir / "executive_summary.md",
+        ],
+    )
+    write_run_manifest(manifest, output_dir / "run_manifest.json")
 
     console.print(f"[green]Analysis complete. Outputs written to {output_dir}[/green]")
 
@@ -131,6 +159,7 @@ def analyze(
 @click.option("--top-n", default=10, show_default=True, type=int)
 def eda(input_path: Path, output_dir: Path, top_n: int) -> None:
     """Generate exploratory analysis charts from complaint records."""
+    started_at = datetime.now(timezone.utc)
     frame = pd.read_csv(input_path)
     complaints = normalize_complaints(frame)
 
@@ -144,6 +173,24 @@ def eda(input_path: Path, output_dir: Path, top_n: int) -> None:
         output_dir=output_dir,
         top_n=top_n,
     )
+    finished_at = datetime.now(timezone.utc)
+    manifest = build_run_manifest(
+        command="eda",
+        started_at=started_at,
+        finished_at=finished_at,
+        input_path=input_path,
+        input_rows=len(frame),
+        output_rows=len(complaints),
+        parameters={"top_n": top_n},
+        output_paths=[
+            output_dir / "product_share.png",
+            output_dir / "issue_share.png",
+            output_dir / "monthly_volume_trend.png",
+            output_dir / "risk_distribution.png",
+            output_dir / "timely_response_share.png",
+        ],
+    )
+    write_run_manifest(manifest, output_dir / "run_manifest.json")
     console.print(f"[green]EDA charts written to {output_dir}[/green]")
 
 
@@ -159,6 +206,7 @@ def validate(
     fail_on_error: bool,
 ) -> None:
     """Validate complaint dataset quality and schema conformance."""
+    started_at = datetime.now(timezone.utc)
     raw = pd.read_csv(input_path)
     complaints = normalize_complaints(raw)
     report = validate_complaints_frame(
@@ -169,6 +217,30 @@ def validate(
 
     report_frame = report.to_frame()
     console.print(report_frame.to_markdown(index=False))
+    failing_checks = int((report_frame["status"] == "fail").sum())
+    warning_checks = int((report_frame["status"] == "warn").sum())
+    validation_status: ValidationStatus = (
+        "fail" if failing_checks > 0 else "warn" if warning_checks > 0 else "pass"
+    )
+    finished_at = datetime.now(timezone.utc)
+    validation_output_dir = Path("reports") / "validation"
+    manifest = build_run_manifest(
+        command="validate",
+        started_at=started_at,
+        finished_at=finished_at,
+        input_path=input_path,
+        input_rows=len(raw),
+        output_rows=len(complaints),
+        parameters={
+            "min_narrative_share": min_narrative_share,
+            "max_missing_date_share": max_missing_date_share,
+            "fail_on_error": fail_on_error,
+        },
+        output_paths=[validation_output_dir / "run_manifest.json"],
+        validation_status=validation_status,
+        validation_failures=failing_checks,
+    )
+    write_run_manifest(manifest, validation_output_dir / "run_manifest.json")
 
     if fail_on_error and report.has_failures:
         raise click.ClickException("Validation failed. One or more checks returned status=fail.")

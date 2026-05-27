@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -26,6 +27,9 @@ class DuckDBStore:
         if if_exists not in {"replace", "append"}:
             msg = "if_exists must be either 'replace' or 'append'."
             raise ValueError(msg)
+        if not _is_safe_identifier(table_name):
+            msg = "table_name must contain only letters, numbers, and underscores."
+            raise ValueError(msg)
 
         connection = duckdb.connect(str(self.database_path))
         try:
@@ -35,7 +39,12 @@ class DuckDBStore:
                     f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM input_df"
                 )
             else:
-                connection.execute(f"INSERT INTO {table_name} SELECT * FROM input_df")
+                if self.table_exists(table_name):
+                    connection.execute(f"INSERT INTO {table_name} SELECT * FROM input_df")
+                else:
+                    connection.execute(
+                        f"CREATE TABLE {table_name} AS SELECT * FROM input_df"
+                    )
         finally:
             connection.close()
 
@@ -53,6 +62,9 @@ class DuckDBStore:
 
     def read_table(self, table_name: str) -> pd.DataFrame:
         """Read a full table into a pandas DataFrame."""
+        if not _is_safe_identifier(table_name):
+            msg = "table_name must contain only letters, numbers, and underscores."
+            raise ValueError(msg)
         connection = duckdb.connect(str(self.database_path))
         try:
             frame = connection.execute(f"SELECT * FROM {table_name}").fetch_df()
@@ -68,3 +80,8 @@ class DuckDBStore:
         finally:
             connection.close()
         return frame
+
+
+def _is_safe_identifier(value: str) -> bool:
+    """Validate a simple SQL identifier for table names."""
+    return bool(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value))

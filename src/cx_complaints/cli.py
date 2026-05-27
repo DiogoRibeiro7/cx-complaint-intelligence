@@ -10,6 +10,7 @@ import pandas as pd
 from rich.console import Console
 
 from cx_complaints.data.cfpb_client import CFPBClient, CFPBQuery, save_complaints_csv
+from cx_complaints.data.duckdb_store import DuckDBStore
 from cx_complaints.data.schema import normalize_complaints
 from cx_complaints.data.validation import validate_complaints_frame
 from cx_complaints.features.text_features import add_text_features
@@ -358,6 +359,69 @@ def train_baselines(
     )
     write_run_manifest(manifest, output_dir / "run_manifest.json")
     console.print(f"[green]Baseline model outputs written to {output_dir}[/green]")
+
+
+@main.command("persist-duckdb")
+@click.option("--input", "input_path", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--database", "database_path", required=True, type=click.Path(path_type=Path))
+@click.option("--reports-dir", default=None, type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--if-exists",
+    default="replace",
+    show_default=True,
+    type=click.Choice(["replace", "append"]),
+)
+def persist_duckdb(
+    input_path: Path,
+    database_path: Path,
+    reports_dir: Path | None,
+    if_exists: str,
+) -> None:
+    """Persist normalized complaints and report tables into DuckDB."""
+    started_at = datetime.now(timezone.utc)
+    raw = pd.read_csv(input_path)
+    complaints = normalize_complaints(raw)
+    complaints = add_clean_text_column(complaints)
+    complaints = add_text_features(complaints)
+    complaints = score_complaint_risk(complaints)
+
+    store = DuckDBStore(database_path=database_path)
+    store.write_dataframe(complaints, table_name="complaints", if_exists=if_exists)  # type: ignore[arg-type]
+
+    output_paths: list[str | Path] = [database_path]
+    if reports_dir is not None:
+        table_to_file = {
+            "product_summary": reports_dir / "product_summary.csv",
+            "issue_summary": reports_dir / "issue_summary.csv",
+            "company_summary": reports_dir / "company_summary.csv",
+            "topic_distribution": reports_dir / "topic_distribution.csv",
+            "topic_terms": reports_dir / "topic_terms.csv",
+            "baseline_metrics": reports_dir / "baseline_metrics.csv",
+        }
+        for table_name, path in table_to_file.items():
+            if path.exists():
+                frame = pd.read_csv(path)
+                store.write_dataframe(frame, table_name=table_name, if_exists="replace")
+                output_paths.append(path)
+
+    finished_at = datetime.now(timezone.utc)
+    manifest = build_run_manifest(
+        command="persist-duckdb",
+        started_at=started_at,
+        finished_at=finished_at,
+        input_path=input_path,
+        input_rows=len(raw),
+        output_rows=len(complaints),
+        parameters={
+            "database": str(database_path),
+            "reports_dir": str(reports_dir) if reports_dir is not None else None,
+            "if_exists": if_exists,
+        },
+        output_paths=output_paths,
+    )
+    manifest_path = database_path.parent / "persist_duckdb_manifest.json"
+    write_run_manifest(manifest, manifest_path)
+    console.print(f"[green]DuckDB tables written to {database_path}[/green]")
 
 
 if __name__ == "__main__":

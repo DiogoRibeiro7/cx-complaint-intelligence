@@ -270,3 +270,17 @@ store = DuckDBStore("data/analytics/complaints.duckdb")
 store.write_dataframe(frame=complaints_df, table_name="complaints", if_exists="replace")
 summary = store.query("SELECT product, count(*) AS complaints FROM complaints GROUP BY product")
 ```
+
+You can also persist pipeline-ready tables directly from the CLI:
+
+```bash
+poetry run cx-complaints persist-duckdb \
+  --input data/raw/cfpb_sample.csv \
+  --database data/analytics/complaints.duckdb \
+  --reports-dir reports/sample \
+  --if-exists replace
+```
+
+This writes the normalized `complaints` table and, when present in `--reports-dir`,
+also persists `product_summary`, `issue_summary`, `company_summary`,
+`topic_distribution`, `topic_terms`, and `baseline_metrics`.

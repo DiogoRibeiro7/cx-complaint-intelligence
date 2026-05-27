@@ -7,7 +7,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-ManifestCommand = Literal["fetch", "analyze", "eda", "validate", "train-baselines"]
+ManifestCommand = Literal[
+    "fetch",
+    "analyze",
+    "eda",
+    "validate",
+    "train-baselines",
+    "persist-duckdb",
+]
 ValidationStatus = Literal["pass", "warn", "fail", "not_run"]
 
 

@@ -54,3 +54,22 @@ def test_duckdb_store_rejects_invalid_if_exists(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="if_exists must be either"):
         store.write_dataframe(frame, table_name="complaints", if_exists="invalid")  # type: ignore[arg-type]
+
+
+def test_duckdb_store_append_creates_table_when_missing(tmp_path: Path) -> None:
+    db_path = tmp_path / "analytics.duckdb"
+    store = DuckDBStore(db_path)
+    frame = pd.DataFrame({"complaint_id": [1], "risk_score": [2.0]})
+
+    store.write_dataframe(frame, table_name="complaints", if_exists="append")
+    result = store.read_table("complaints")
+    assert len(result) == 1
+
+
+def test_duckdb_store_rejects_invalid_table_name(tmp_path: Path) -> None:
+    db_path = tmp_path / "analytics.duckdb"
+    store = DuckDBStore(db_path)
+    frame = pd.DataFrame({"complaint_id": [1]})
+
+    with pytest.raises(ValueError, match="table_name must contain only"):
+        store.write_dataframe(frame, table_name="complaints;DROP", if_exists="replace")

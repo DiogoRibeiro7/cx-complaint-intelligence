@@ -344,6 +344,74 @@ def test_train_baselines_command_runs_and_writes_outputs(
     assert manifest.command == "train-baselines"
     assert manifest.parameters["target_definition"] == "risk_level == 'high'"
     assert captured["manifest_output_path"] == output_dir / "run_manifest.json"
+
+
+def test_persist_duckdb_command_writes_core_and_report_tables(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    input_path = tmp_path / "input.csv"
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    database_path = tmp_path / "analytics" / "complaints.duckdb"
+    pd.DataFrame(
+        {
+            "Complaint ID": [1, 2],
+            "Date received": ["2024-01-01", "2024-02-01"],
+            "Product": ["Credit card", "Mortgage"],
+            "Issue": ["Billing disputes", "Foreclosure"],
+            "Consumer complaint narrative": ["urgent dispute", "foreclosure concern"],
+            "Timely response?": ["No", "Yes"],
+        }
+    ).to_csv(input_path, index=False)
+    pd.DataFrame({"product": ["Credit card"], "complaints": [2]}).to_csv(
+        reports_dir / "product_summary.csv",
+        index=False,
+    )
+
+    writes: list[tuple[str, str]] = []
+    captured: dict[str, object] = {}
+
+    class _FakeDuckDBStore:
+        def __init__(self, database_path: Path) -> None:
+            captured["database_path"] = database_path
+
+        def write_dataframe(self, frame: pd.DataFrame, table_name: str, if_exists: str) -> None:
+            writes.append((table_name, if_exists))
+
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
+    monkeypatch.setattr(cli, "DuckDBStore", _FakeDuckDBStore)
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.main,
+        [
+            "persist-duckdb",
+            "--input",
+            str(input_path),
+            "--database",
+            str(database_path),
+            "--reports-dir",
+            str(reports_dir),
+            "--if-exists",
+            "append",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "DuckDB tables written" in result.output
+    assert captured["database_path"] == database_path
+    assert ("complaints", "append") in writes
+    assert ("product_summary", "replace") in writes
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.command == "persist-duckdb"
+    assert captured["manifest_output_path"] == database_path.parent / "persist_duckdb_manifest.json"
     assert manifest.validation_failures > 0
     assert captured["manifest_output_path"] == Path("reports") / "validation" / "run_manifest.json"
 

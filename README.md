@@ -139,6 +139,31 @@ This command checks schema conformance, duplicate complaint IDs, missing
 `date_received` share, and narrative coverage. It fails with non-zero exit when
 failing checks are detected unless `--no-fail-on-error` is passed.
 
+## Train supervised baselines
+
+```bash
+poetry run cx-complaints train-baselines \
+  --input data/raw/cfpb_sample.csv \
+  --output-dir reports/sample/baselines \
+  --train-fraction 0.8 \
+  --min-df 5 \
+  --max-features 5000
+```
+
+The command creates:
+
+```text
+reports/sample/baselines/
+├── baseline_metrics.csv
+├── train_class_imbalance.csv
+├── time_split_summary.csv
+├── logistic_regression_top_positive_terms.csv
+├── logistic_regression_top_negative_terms.csv
+├── linear_svm_top_positive_terms.csv
+├── linear_svm_top_negative_terms.csv
+└── run_manifest.json
+```
+
 ## Notebook analysis
 
 The repository includes a polished analysis notebook at

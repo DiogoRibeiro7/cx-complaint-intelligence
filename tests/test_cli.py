@@ -17,6 +17,21 @@ class _FakeTopicResult:
     topic_terms: pd.DataFrame
 
 
+@dataclass(frozen=True)
+class _FakeTimeSplitResult:
+    train: pd.DataFrame
+    test: pd.DataFrame
+    split_timestamp: pd.Timestamp
+
+
+@dataclass(frozen=True)
+class _FakeBaselineResult:
+    model_name: str
+    metrics: object
+    top_positive_terms: pd.DataFrame
+    top_negative_terms: pd.DataFrame
+
+
 def test_analyze_command_runs_and_writes_outputs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -219,6 +234,116 @@ def test_validate_command_fails_on_failing_checks(
     assert isinstance(manifest, RunManifest)
     assert manifest.command == "validate"
     assert manifest.validation_status == "fail"
+
+
+def test_train_baselines_command_runs_and_writes_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    input_path = tmp_path / "input.csv"
+    output_dir = tmp_path / "baseline_out"
+    pd.DataFrame(
+        {
+            "Complaint ID": [1, 2, 3, 4],
+            "Date received": ["2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01"],
+            "Product": ["Credit card", "Mortgage", "Debt collection", "Bank account"],
+            "Issue": ["Billing disputes", "Foreclosure", "Harassment", "Fees"],
+            "Consumer complaint narrative": [
+                "urgent fraud charges",
+                "foreclosure process issue",
+                "collector threats",
+                "fees and account lock",
+            ],
+            "Timely response?": ["No", "Yes", "No", "Yes"],
+        }
+    ).to_csv(input_path, index=False)
+
+    captured: dict[str, object] = {}
+
+    def fake_split(
+        frame: pd.DataFrame,
+        date_column: str,
+        train_fraction: float,
+    ) -> _FakeTimeSplitResult:
+        assert date_column == "date_received"
+        assert train_fraction == 0.75
+        train = frame.iloc[:3].copy()
+        test = frame.iloc[2:].copy()
+        train["target"] = [0, 1, 0]
+        test["target"] = [1, 0]
+        return _FakeTimeSplitResult(
+            train=train,
+            test=test,
+            split_timestamp=pd.Timestamp("2024-03-01"),
+        )
+
+    def fake_run_baselines(**_: object) -> list[_FakeBaselineResult]:
+        return [
+            _FakeBaselineResult(
+                model_name="logistic_regression",
+                metrics=object(),
+                top_positive_terms=pd.DataFrame({"term": ["fraud"], "weight": [1.1]}),
+                top_negative_terms=pd.DataFrame({"term": ["resolved"], "weight": [-0.8]}),
+            ),
+            _FakeBaselineResult(
+                model_name="linear_svm",
+                metrics=object(),
+                top_positive_terms=pd.DataFrame({"term": ["threat"], "weight": [0.9]}),
+                top_negative_terms=pd.DataFrame({"term": ["question"], "weight": [-0.7]}),
+            ),
+        ]
+
+    def fake_metrics_table(results: list[_FakeBaselineResult]) -> pd.DataFrame:
+        assert len(results) == 2
+        return pd.DataFrame(
+            {
+                "model_name": ["logistic_regression", "linear_svm"],
+                "precision": [0.8, 0.7],
+                "recall": [0.6, 0.65],
+                "f1": [0.685, 0.674],
+                "roc_auc": [0.82, 0.79],
+            }
+        )
+
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
+    monkeypatch.setattr(cli, "time_aware_train_test_split", fake_split)
+    monkeypatch.setattr(cli, "run_text_baseline_models", fake_run_baselines)
+    monkeypatch.setattr(cli, "baseline_metrics_table", fake_metrics_table)
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.main,
+        [
+            "train-baselines",
+            "--input",
+            str(input_path),
+            "--output-dir",
+            str(output_dir),
+            "--train-fraction",
+            "0.75",
+            "--min-df",
+            "1",
+            "--max-features",
+            "200",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Baseline model outputs written" in result.output
+    assert (output_dir / "baseline_metrics.csv").exists()
+    assert (output_dir / "train_class_imbalance.csv").exists()
+    assert (output_dir / "time_split_summary.csv").exists()
+    assert (output_dir / "logistic_regression_top_positive_terms.csv").exists()
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.command == "train-baselines"
+    assert manifest.parameters["target_definition"] == "risk_level == 'high'"
+    assert captured["manifest_output_path"] == output_dir / "run_manifest.json"
     assert manifest.validation_failures > 0
     assert captured["manifest_output_path"] == Path("reports") / "validation" / "run_manifest.json"
 

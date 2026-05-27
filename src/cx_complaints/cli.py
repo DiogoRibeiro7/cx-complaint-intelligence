@@ -13,7 +13,12 @@ from cx_complaints.data.cfpb_client import CFPBClient, CFPBQuery, save_complaint
 from cx_complaints.data.schema import normalize_complaints
 from cx_complaints.data.validation import validate_complaints_frame
 from cx_complaints.features.text_features import add_text_features
+from cx_complaints.modelling.baselines import baseline_metrics_table, run_text_baseline_models
 from cx_complaints.modelling.risk import score_complaint_risk
+from cx_complaints.modelling.supervised import (
+    summarize_class_imbalance,
+    time_aware_train_test_split,
+)
 from cx_complaints.nlp.topics import fit_nmf_topics
 from cx_complaints.pipeline.manifest import ValidationStatus
 from cx_complaints.pipeline.metadata import build_run_manifest, write_run_manifest
@@ -249,6 +254,110 @@ def validate(
         console.print("[yellow]Validation completed with failures (not enforced).[/yellow]")
     else:
         console.print("[green]Validation passed with no failing checks.[/green]")
+
+
+@main.command("train-baselines")
+@click.option("--input", "input_path", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--output-dir", required=True, type=click.Path(path_type=Path))
+@click.option("--train-fraction", default=0.8, show_default=True, type=float)
+@click.option("--min-df", default=5, show_default=True, type=int)
+@click.option("--max-features", default=5000, show_default=True, type=int)
+def train_baselines(
+    input_path: Path,
+    output_dir: Path,
+    train_fraction: float,
+    min_df: int,
+    max_features: int,
+) -> None:
+    """Train transparent supervised baselines with a chronological split."""
+    started_at = datetime.now(timezone.utc)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    raw = pd.read_csv(input_path)
+    complaints = normalize_complaints(raw)
+    complaints = add_clean_text_column(complaints)
+    complaints = add_text_features(complaints)
+    complaints = score_complaint_risk(complaints)
+    modelling_frame = complaints.copy()
+    modelling_frame["target"] = (modelling_frame["risk_level"] == "high").astype(int)
+
+    split = time_aware_train_test_split(
+        frame=modelling_frame,
+        date_column="date_received",
+        train_fraction=train_fraction,
+    )
+    if split.train["target"].nunique(dropna=True) < 2:
+        msg = "Training target has a single class after splitting; cannot fit baselines."
+        raise click.ClickException(msg)
+    if split.test["target"].nunique(dropna=True) < 2:
+        msg = "Test target has a single class after splitting; metrics are not reliable."
+        raise click.ClickException(msg)
+
+    class_balance = summarize_class_imbalance(split.train["target"])
+    class_balance.to_csv(output_dir / "train_class_imbalance.csv", index=False)
+
+    results = run_text_baseline_models(
+        train_frame=split.train,
+        test_frame=split.test,
+        text_column="clean_text",
+        target_column="target",
+        min_df=min_df,
+        max_features=max_features,
+    )
+    metrics = (
+        baseline_metrics_table(results)
+        .sort_values("f1", ascending=False)
+        .reset_index(drop=True)
+    )
+    metrics.to_csv(output_dir / "baseline_metrics.csv", index=False)
+
+    for result in results:
+        result.top_positive_terms.to_csv(
+            output_dir / f"{result.model_name}_top_positive_terms.csv",
+            index=False,
+        )
+        result.top_negative_terms.to_csv(
+            output_dir / f"{result.model_name}_top_negative_terms.csv",
+            index=False,
+        )
+
+    split_summary = pd.DataFrame(
+        [
+            {
+                "split_timestamp": split.split_timestamp.isoformat(),
+                "train_rows": len(split.train),
+                "test_rows": len(split.test),
+            }
+        ]
+    )
+    split_summary.to_csv(output_dir / "time_split_summary.csv", index=False)
+
+    finished_at = datetime.now(timezone.utc)
+    manifest = build_run_manifest(
+        command="train-baselines",
+        started_at=started_at,
+        finished_at=finished_at,
+        input_path=input_path,
+        input_rows=len(raw),
+        output_rows=len(modelling_frame),
+        parameters={
+            "train_fraction": train_fraction,
+            "min_df": min_df,
+            "max_features": max_features,
+            "target_definition": "risk_level == 'high'",
+        },
+        output_paths=[
+            output_dir / "train_class_imbalance.csv",
+            output_dir / "baseline_metrics.csv",
+            output_dir / "time_split_summary.csv",
+            output_dir / "logistic_regression_top_positive_terms.csv",
+            output_dir / "logistic_regression_top_negative_terms.csv",
+            output_dir / "linear_svm_top_positive_terms.csv",
+            output_dir / "linear_svm_top_negative_terms.csv",
+        ],
+    )
+    write_run_manifest(manifest, output_dir / "run_manifest.json")
+    console.print(f"[green]Baseline model outputs written to {output_dir}[/green]")
 
 
 if __name__ == "__main__":

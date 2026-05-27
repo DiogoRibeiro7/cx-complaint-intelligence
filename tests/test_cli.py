@@ -412,8 +412,8 @@ def test_persist_duckdb_command_writes_core_and_report_tables(
     assert isinstance(manifest, RunManifest)
     assert manifest.command == "persist-duckdb"
     assert captured["manifest_output_path"] == database_path.parent / "persist_duckdb_manifest.json"
-    assert manifest.validation_failures > 0
-    assert captured["manifest_output_path"] == Path("reports") / "validation" / "run_manifest.json"
+    assert manifest.validation_status == "not_run"
+    assert manifest.validation_failures == 0
 
 
 def test_validate_command_can_skip_failure_exit(

@@ -1,5 +1,12 @@
 # Customer Experience Complaint Intelligence
 
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![Poetry](https://img.shields.io/badge/deps-poetry-60A5FA)](https://python-poetry.org/)
+[![Lint: Ruff](https://img.shields.io/badge/lint-ruff-46A2F1)](https://docs.astral.sh/ruff/)
+[![Types: mypy](https://img.shields.io/badge/types-mypy-2A6DB2)](https://mypy-lang.org/)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest-0A9EDC)](https://docs.pytest.org/)
+[![Docs: MkDocs Material](https://img.shields.io/badge/docs-mkdocs--material-526CFE)](https://squidfunk.github.io/mkdocs-material/)
+
 A portfolio-grade customer experience analytics project built around the CFPB Consumer Complaint Database.
 
 The goal is to transform raw complaint records into operational intelligence:
@@ -11,6 +18,31 @@ The goal is to transform raw complaint records into operational intelligence:
 - How can a CX, compliance, or data science team prioritise action?
 
 This repository is intentionally designed as a strong applied data science project, not only as a sentiment-analysis notebook.
+
+## Contributor standards
+
+Core implementation expectations:
+
+- Keep public APIs stable unless a breaking change is documented.
+- Use type hints and docstrings for public classes and functions.
+- Prefer small, testable functions and explicit exception handling.
+- Avoid heavy dependencies unless they are justified by the roadmap.
+- Do not commit raw complaint narratives or large generated outputs.
+
+Before considering a change complete, run:
+
+```bash
+poetry run ruff check .
+poetry run mypy src tests
+poetry run pytest
+```
+
+Data and modelling guardrails:
+
+- Keep raw and processed datasets separate, preserving `complaint_id` for traceability.
+- Do not attempt consumer re-identification or enrich rows with personal data.
+- Keep TF-IDF + NMF available as the transparent topic-modelling baseline.
+- Keep risk scoring interpretable and document each scoring component.
 
 ## Project scope
 
@@ -27,6 +59,8 @@ The first implementation supports:
 9. Testing the critical data-cleaning, schema, topic, and scoring logic.
 
 ## Repository layout
+
+Logical project structure (minimal):
 
 ```text
 .
@@ -46,6 +80,32 @@ The first implementation supports:
 │       ├── preprocessing/
 │       └── reports/
 └── tests/
+```
+
+Current top-level tree (exact):
+
+```text
+.
+├── .benchmarks/
+├── .cache/
+├── .github/
+├── .mypy_cache/
+├── .pytest_cache/
+├── .ruff_cache/
+├── data/
+├── docs/
+├── notebooks/
+├── reports/
+├── scripts/
+├── site/
+├── src/
+├── tests/
+├── .gitignore
+├── mkdocs.yml
+├── poetry.lock
+├── pyproject.toml
+├── README.md
+└── ROADMAP.md
 ```
 
 ## Installation

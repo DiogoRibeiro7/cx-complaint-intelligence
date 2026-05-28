@@ -50,7 +50,7 @@ Every notebook follows the same skeleton:
 
 ## Shared utilities
 
-The boilerplate lives in [`src/cx_complaints/reports/notebook_utils.py`](../src/cx_complaints/reports/notebook_utils.py). It provides:
+The boilerplate lives in `src/cx_complaints/reports/notebook_utils.py`. It provides:
 
 - `setup_notebook(notebook_id)` — applies the matplotlib house style, resolves paths, returns a `NotebookContext`.
 - `load_complaints(ctx)` — loads, normalises, cleans, and scores the bundled sample in one call.

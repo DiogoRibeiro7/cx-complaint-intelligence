@@ -212,6 +212,17 @@ The dashboard has five pages:
 - **Priority Queue** — filterable high-risk + untimely + weak-response queue with CSV download.
 - **Weekly Brief** — live weekly KPIs, WoW deltas, and the auto-generated executive brief.
 
+## Documentation site
+
+The project ships a [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) site that renders the README, architecture notes, CLI reference, modelling notes, data-ethics policy, and the full notebook suite as a browsable HTML tree. Build it locally:
+
+```bash
+poetry run mkdocs serve         # live-reload at http://localhost:8000
+poetry run mkdocs build --strict  # one-shot build into site/
+```
+
+The site sources live under [docs/](docs/), the build configuration is in [mkdocs.yml](mkdocs.yml), and a small hook at [scripts/mkdocs_hooks.py](scripts/mkdocs_hooks.py) mirrors the executed notebooks into the docs tree at build time. Both `site/` and `docs/notebooks/` are gitignored.
+
 The data-loading layer (cached) and the pure aggregation helpers (`apply_filters`, `priority_queue`, `weekly_kpis`, `week_over_week`, `topic_weekly_movement`, `build_executive_brief`) are testable in isolation and shared across the pages.
 
 ## Example report

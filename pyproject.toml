@@ -32,6 +32,9 @@ types-requests = ">=2.31.0,<3.0.0"
 nbformat = ">=5.10.0,<6.0.0"
 nbconvert = ">=7.16.0,<8.0.0"
 ipykernel = ">=6.29.0,<8.0.0"
+mkdocs = ">=1.6,<2.0"
+mkdocs-material = ">=9.5,<10.0"
+mkdocs-jupyter = ">=0.25,<1.0"
 
 [tool.poetry.scripts]
 cx-complaints = "cx_complaints.cli:main"

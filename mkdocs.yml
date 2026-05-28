@@ -1,0 +1,96 @@
+site_name: CX Complaint Intelligence
+site_description: >
+  A portfolio-grade complaint-intelligence project built on the CFPB Consumer
+  Complaint Database. Risk scoring, topic discovery, supervised baselines, an
+  interactive dashboard, and a reproducible notebook suite.
+site_author: Diogo Ribeiro
+copyright: Copyright &copy; 2026 Diogo Ribeiro
+
+repo_name: cx-complaint-intelligence
+repo_url: https://github.com/diogoribeiro/cx-complaint-intelligence
+edit_uri: ""
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.share
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+hooks:
+  - scripts/mkdocs_hooks.py
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      execute: false
+      include_source: true
+      include_requirejs: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Architecture: architecture.md
+  - CLI reference: cli.md
+  - Dashboard: dashboard.md
+  - Modelling: modelling.md
+  - Data ethics: ethics.md
+  - Notebooks:
+      - Overview: notebooks/index.md
+      - 01 — Complaint intelligence analysis: notebooks/01_complaint_intelligence_analysis.ipynb
+      - 02 — Topic deep dive: notebooks/02_topic_deep_dive.ipynb
+      - 03 — Supervised baseline preparation: notebooks/03_supervised_baseline_preparation.ipynb
+      - 04 — Model comparison and thresholds: notebooks/04_model_comparison_and_thresholds.ipynb
+      - 05 — Company risk benchmarking: notebooks/05_company_risk_benchmarking.ipynb
+      - 06 — Topic trend monitoring: notebooks/06_topic_trend_monitoring.ipynb
+      - 07 — Data quality and schema audit: notebooks/07_data_quality_and_schema_audit.ipynb
+      - 08 — Response quality and operational playbook: notebooks/08_response_quality_and_operational_playbook.ipynb
+      - 09 — Weekly monitoring scorecard: notebooks/09_weekly_monitoring_scorecard.ipynb
+      - 10 — Executive brief generator: notebooks/10_executive_brief_generator.ipynb

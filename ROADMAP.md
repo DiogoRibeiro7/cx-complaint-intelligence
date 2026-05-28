@@ -1,10 +1,21 @@
 # Roadmap
 
-This roadmap describes how to evolve the project from a strong portfolio project into a production-style customer experience intelligence platform.
+This roadmap describes how the project has evolved from a small CFPB analysis into a portfolio-grade complaint intelligence platform, and where it still has room to grow.
+
+## Current state — phases 0–9 shipped
+
+The repository today provides:
+
+- a normalised, validated CFPB pipeline with audit trails (`RunManifest`);
+- two interpretable topic backends (TF-IDF + NMF baseline; opt-in sentence-transformer + KMeans + c-TF-IDF labelling) with schema-compatible outputs;
+- a transparent risk score plus supervised text baselines (logistic regression, linear SVM) with threshold tooling;
+- a 12-document analysis suite (11 notebooks + a shared README) executed end-to-end against the bundled sample;
+- a five-page Streamlit dashboard backed by tested pure helpers;
+- a MkDocs Material documentation site that renders the README, architecture, CLI reference, modelling notes, ethics policy, and the notebook outputs;
+- DuckDB analytics storage, dataset-validation CLI, and a run-manifest schema with tests;
+- a CI workflow (ruff + mypy + pytest) and an engineering checklist that governs PR contracts.
 
 ## Phase 0 — Foundation
-
-Status: implemented in this repository.
 
 - [x] CFPB API ingestion.
 - [x] Stable complaint schema.
@@ -18,87 +29,51 @@ Status: implemented in this repository.
 
 ## Phase 1 — Exploratory analysis and portfolio notebook
 
-Goal: create a polished analytical notebook or article.
-
-- [ ] Add a notebook with a clear business question.
-- [ ] Compare complaint volume by product, issue, state, and company.
-- [ ] Analyse trends over time.
-- [ ] Analyse response quality and timely-response patterns.
+- [x] Notebook with a clear business question (`01_complaint_intelligence_analysis.ipynb`).
+- [x] Compare complaint volume by product, issue, state, and company (NB 01 + NB 05).
+- [x] Analyse trends over time (NB 01 + NB 06 + NB 09).
+- [x] Analyse response quality and timely-response patterns (NB 08).
 - [x] Add charts for product share, issue share, monthly trends, and risk distribution.
-- [ ] Write an executive narrative with business recommendations.
-
-Suggested deliverable:
-
-```text
-notebooks/01_complaint_intelligence_analysis.ipynb
-```
+- [x] Write an executive narrative with business recommendations (NB 10 + per-notebook computed insights).
 
 ## Phase 2 — Better NLP
 
-Goal: improve the quality of extracted themes.
-
+- [x] Add sentence-transformer embeddings (`nlp/embedding_topics.SentenceTransformerEncoder`).
+- [x] Add clustering over embeddings with c-TF-IDF labelling (BERTopic-style).
+- [x] Add representative complaint extraction for each topic (NB 02 + Topics dashboard page).
 - [ ] Add phrase detection for recurring issue expressions.
 - [ ] Add aspect-based sentiment analysis.
-- [ ] Add sentence-transformer embeddings.
-- [ ] Add BERTopic or clustering over embeddings.
 - [ ] Add semantic search over complaint narratives.
-- [ ] Add representative complaint extraction for each topic.
 - [ ] Add topic labelling with an optional LLM.
 
-Possible output:
-
-```text
-reports/topics/topic_cards.md
-```
-
-Each topic card should include:
-
-- topic label;
-- top terms;
-- representative complaint summaries;
-- affected products;
-- affected companies;
-- severity distribution;
-- suggested CX action.
+Each topic card today already includes top terms, representative complaints, affected products, affected companies, and severity distribution. Suggested CX-action automation remains future work.
 
 ## Phase 3 — Supervised modelling
 
-Goal: move from descriptive analytics to prediction.
-
-Candidate models:
-
-- timely-response prediction;
-- company-response-category prediction;
-- high-risk complaint prediction;
-- relief-likelihood prediction;
-- product or issue classification from narrative text.
-
-Technical tasks:
-
-- [ ] Create reproducible train/test splits by time.
-- [ ] Add baseline logistic regression and linear SVM models.
-- [ ] Add calibrated probabilities.
-- [ ] Add model evaluation reports.
-- [ ] Add confusion matrices and per-class metrics.
+- [x] Create reproducible train/test splits by time (`modelling.supervised.time_aware_train_test_split`).
+- [x] Add baseline logistic regression and linear SVM models (`modelling.baselines`).
+- [x] Add model evaluation reports (NB 03 + NB 04 + `train-baselines` CLI).
+- [ ] Add calibrated probabilities (`CalibratedClassifierCV`).
+- [ ] Add confusion matrices and per-class metrics in the artefact pack.
 - [ ] Add drift checks between train and recent data.
-- [ ] Add feature importance and explainability.
+- [ ] Add feature importance and explainability (SHAP / per-token contribution beyond logistic coefficients).
 
 ## Phase 4 — Risk scoring v2
 
-Goal: replace the heuristic score with a calibrated decision-support model.
+The current risk score is heuristic and intentionally transparent. Replacing it with a calibrated supervised model is reserved for when a reviewed-outcomes dataset exists.
 
 - [ ] Define a target label using combinations of response category, timely response, disputed status, and relief indicators.
 - [ ] Train a supervised model with text and metadata features.
 - [ ] Calibrate probabilities.
 - [ ] Compare model score with the initial heuristic score.
-- [ ] Add threshold selection based on operational capacity.
+- [ ] Add threshold selection based on operational capacity (partial: NB 04 sweeps thresholds for the LR baseline).
 - [ ] Add fairness checks across product, state, and vulnerable-consumer tags.
 
 ## Phase 5 — Monitoring and trend detection
 
-Goal: identify emerging complaint themes.
-
-- [ ] Add monthly trend tables.
+- [x] Add monthly trend tables (NB 06).
+- [x] Add per-week scorecard with WoW deltas and topic movement (NB 09).
+- [x] Emerging-topic flag (delta-pp threshold) in NB 06.
 - [ ] Add exponentially weighted moving averages.
 - [ ] Add change-point detection for complaint volume and topic share.
 - [ ] Add anomaly detection for sudden issue spikes.
@@ -107,45 +82,28 @@ Goal: identify emerging complaint themes.
 
 ## Phase 6 — Dashboard
 
-Goal: make the project usable by non-technical stakeholders.
-
-Recommended first version: Streamlit.
-
-Views:
-
-- [ ] Executive overview.
-- [ ] Product and issue explorer.
-- [ ] Company benchmarking.
-- [ ] Topic explorer.
-- [ ] High-risk complaint queue.
-- [ ] Trend and anomaly dashboard.
-- [ ] Search and filter interface.
+- [x] Executive overview (Overview page).
+- [x] Product and issue explorer (Concentration page).
+- [x] Company benchmarking with min-volume guardrail (Concentration page).
+- [x] Topic explorer with bubble chart and deep-dive (Topics page).
+- [x] High-risk complaint queue with CSV export (Priority Queue page).
+- [x] Trend and weekly-brief view (Weekly Brief page).
+- [ ] Search and free-text filter interface.
+- [ ] Live deployment (Streamlit Cloud or HF Space) so reviewers can click without cloning.
 
 ## Phase 7 — Data engineering
 
-Goal: turn the project into a repeatable pipeline.
-
-- [ ] Add incremental ingestion.
+- [x] Add DuckDB support for local analytics (`data/duckdb_store.py` + `persist-duckdb` CLI).
+- [x] Add data validation checks (`data/validation.py` + `validate` CLI).
+- [x] Add pipeline metadata (`pipeline/manifest.py` + per-command `run_manifest.json`).
+- [ ] Add incremental ingestion (`fetch` is currently full-snapshot).
 - [ ] Store raw API responses separately from cleaned analytical tables.
-- [x] Add DuckDB support for local analytics.
-- [x] Add data validation checks.
-- [ ] Add pipeline metadata.
-- [ ] Add GitHub Actions scheduled runs.
+- [ ] Add GitHub Actions scheduled runs (`cron` workflow).
 - [ ] Add artifact publishing for reports.
-
-Suggested storage structure:
-
-```text
-data/
-├── raw/cfpb/yyyy/mm/dd/
-├── interim/
-├── processed/
-└── analytics/
-```
 
 ## Phase 8 — LLM-assisted reporting
 
-Goal: create useful summaries while keeping traceability.
+The weekly executive brief (NB 10 + dashboard) builds its narrative from computed tables only, without LLM involvement, by design. The phase below would *optionally* add LLM-assisted summaries while keeping that traceability guarantee.
 
 - [ ] Generate topic summaries from representative complaints.
 - [ ] Generate company-level risk narratives.
@@ -156,15 +114,18 @@ Goal: create useful summaries while keeping traceability.
 
 ## Phase 9 — Production-quality package
 
-Goal: make the project maintainable and credible.
-
-- [ ] Add full documentation site.
-- [ ] Add API reference.
-- [x] Add CI with ruff, mypy, pytest, coverage, and security checks.
+- [x] Add full documentation site (MkDocs Material + mkdocs-jupyter).
+- [x] Add CI with ruff, mypy, pytest.
+- [x] Add example reports generated from a fixed sample (`reports/sample/`).
+- [x] Add engineering checklist for contract-aware PR review.
+- [ ] Add API reference (mkdocstrings).
+- [ ] Add coverage upload + badge.
+- [ ] Add security scanning (bandit / pip-audit) to CI.
 - [ ] Add Dockerfile.
 - [ ] Add Makefile or task runner.
 - [ ] Add release workflow.
-- [ ] Add example reports generated from a fixed sample.
+- [ ] Add pre-commit hooks enforcing ruff + a fast pytest subset.
+- [ ] Add Dependabot / Renovate for dependency hygiene.
 
 ## Phase 10 — Research extensions
 
@@ -172,7 +133,8 @@ Possible research-grade directions:
 
 - complaint topic drift over regulatory events;
 - systematic anomaly detection in complaint narratives;
-- measuring effect of narrative clarity on company response outcomes;
+- measuring the effect of narrative clarity on company response outcomes;
 - comparing complaint outcomes across products and response categories;
 - studying LLM-style complaint narratives after late 2022;
-- weak supervision for complaint severity labels.
+- weak supervision for complaint severity labels;
+- counterfactual analysis of timely-response interventions.

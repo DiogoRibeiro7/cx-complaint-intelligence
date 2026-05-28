@@ -38,6 +38,3 @@ docs/notebooks/
 
 # OS
 .DS_Store
-
-# Internal docs (not for public repo)
-AGENTS.md

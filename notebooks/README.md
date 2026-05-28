@@ -18,6 +18,7 @@ The notebooks build on one another. The intended order is:
 | 08 | `08_response_quality_and_operational_playbook.ipynb` | Priority queue: high-risk + untimely + weak response. | `data/raw/cfpb_sample.csv` |
 | 09 | `09_weekly_monitoring_scorecard.ipynb` | Weekly KPIs, WoW deltas, topic movement, escalation checklist. | `reports/sample/*` |
 | 10 | `10_executive_brief_generator.ipynb` | Stakeholder-ready Markdown brief built from computed numbers only. | `reports/sample/*` |
+| 11 | `11_nmf_vs_embedding_topics.ipynb` | Side-by-side comparison of the NMF baseline and the sentence-transformer + KMeans backend. | `data/raw/cfpb_sample.csv` |
 
 ## How to reproduce
 

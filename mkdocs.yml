@@ -94,3 +94,4 @@ nav:
       - 08 — Response quality and operational playbook: notebooks/08_response_quality_and_operational_playbook.ipynb
       - 09 — Weekly monitoring scorecard: notebooks/09_weekly_monitoring_scorecard.ipynb
       - 10 — Executive brief generator: notebooks/10_executive_brief_generator.ipynb
+      - 11 — NMF vs. embedding topics: notebooks/11_nmf_vs_embedding_topics.ipynb

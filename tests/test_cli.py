@@ -125,6 +125,129 @@ def test_analyze_command_runs_and_writes_outputs(
     assert manifest.input_rows == 2
     assert captured["manifest_output_path"] == output_dir / "run_manifest.json"
 
+    # The CLI must also record which topic backend produced the artefacts so
+    # downstream tools can distinguish NMF from embedding runs.
+    method_path = output_dir / "topic_method.json"
+    assert method_path.exists()
+    payload = method_path.read_text(encoding="utf-8")
+    assert '"method": "nmf"' in payload
+
+
+def test_analyze_command_uses_embedding_topic_method_when_selected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`--topic-method=embedding` should route through fit_embedding_topics
+    and record the embedding metadata in topic_method.json + the manifest.
+
+    The actual encoder is mocked so the test never downloads a model.
+    """
+    from dataclasses import dataclass as _dc
+
+    from cx_complaints.nlp import embedding_topics
+
+    input_path = tmp_path / "input.csv"
+    output_dir = tmp_path / "out_embedding"
+    pd.DataFrame(
+        {
+            "Complaint ID": [1, 2],
+            "Date received": ["2024-01-01", "2024-01-02"],
+            "Product": ["Credit card", "Mortgage"],
+            "Issue": ["Billing disputes", "Foreclosure"],
+            "Consumer complaint narrative": ["fees charged twice", "lost my house"],
+            "Timely response?": ["Yes", "No"],
+        }
+    ).to_csv(input_path, index=False)
+
+    captured: dict[str, object] = {}
+
+    @_dc(frozen=True)
+    class _FakeEmbeddingResult:
+        encoder_name: str
+        embeddings: object
+        cluster_model: object
+        topic_terms: pd.DataFrame
+        assignments: pd.DataFrame
+
+    def fake_fit_embedding_topics(
+        texts: pd.Series,
+        *,
+        n_topics: int,
+        encoder_name: str,
+    ) -> _FakeEmbeddingResult:
+        captured["embedding_called"] = True
+        captured["encoder_name"] = encoder_name
+        captured["n_topics"] = n_topics
+        return _FakeEmbeddingResult(
+            encoder_name=encoder_name,
+            embeddings=None,
+            cluster_model=None,
+            assignments=pd.DataFrame(
+                {"topic_id": [0, 1], "topic_score": [0.9, 0.8]},
+                index=texts.index,
+            ),
+            topic_terms=pd.DataFrame(
+                {
+                    "topic_id": [0, 1],
+                    "rank": [1, 1],
+                    "term": ["fees", "house"],
+                    "weight": [0.9, 0.8],
+                }
+            ),
+        )
+
+    def fake_write_report_outputs(
+        frame: pd.DataFrame,
+        topic_terms: pd.DataFrame,
+        output_dir: str | Path,
+    ) -> None:
+        captured["frame"] = frame
+        captured["topic_terms"] = topic_terms
+        captured["output_dir"] = Path(output_dir)
+
+    def fake_write_run_manifest(manifest: object, output_path: str | Path) -> Path:
+        captured["manifest"] = manifest
+        captured["manifest_output_path"] = Path(output_path)
+        return Path(output_path)
+
+    monkeypatch.setattr(embedding_topics, "fit_embedding_topics", fake_fit_embedding_topics)
+    monkeypatch.setattr(cli, "write_report_outputs", fake_write_report_outputs)
+    monkeypatch.setattr(cli, "write_run_manifest", fake_write_run_manifest)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.main,
+        [
+            "analyze",
+            "--input",
+            str(input_path),
+            "--output-dir",
+            str(output_dir),
+            "--topics",
+            "2",
+            "--topic-method",
+            "embedding",
+            "--embedding-model",
+            "my-test-model",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured.get("embedding_called") is True
+    assert captured["encoder_name"] == "my-test-model"
+    assert captured["n_topics"] == 2
+
+    method_path = output_dir / "topic_method.json"
+    assert method_path.exists()
+    payload = method_path.read_text(encoding="utf-8")
+    assert '"method": "embedding"' in payload
+    assert '"model": "my-test-model"' in payload
+
+    manifest = captured["manifest"]
+    assert isinstance(manifest, RunManifest)
+    assert manifest.parameters["topic_method"] == "embedding"
+    assert manifest.parameters["embedding_model"] == "my-test-model"
+
 
 def test_eda_command_runs_and_calls_chart_writer(
     tmp_path: Path,

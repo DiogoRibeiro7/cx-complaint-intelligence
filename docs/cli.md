@@ -44,12 +44,29 @@ poetry run cx-complaints analyze \
     --max-features 5000
 ```
 
+Topic backend selection:
+
+```bash
+# Default: TF-IDF + NMF (transparent, lightweight)
+poetry run cx-complaints analyze --input … --output-dir … --topic-method nmf
+
+# Opt-in: Sentence-Transformer embeddings + KMeans + c-TF-IDF labels
+poetry run cx-complaints analyze --input … --output-dir … \
+    --topic-method embedding \
+    --embedding-model sentence-transformers/all-MiniLM-L6-v2
+```
+
+The embedding backend writes outputs in the same schema as NMF, so the
+notebooks and dashboard work with either. A `topic_method.json` artefact in
+the output directory records which backend produced the run.
+
 Produces, under the output directory:
 
 - `complaint_scores.csv` &mdash; per-complaint scored frame (gitignored).
 - `topic_terms.csv` &mdash; top terms per discovered topic.
 - `topic_distribution.csv`, `product_summary.csv`, `issue_summary.csv`, `company_summary.csv`.
 - `executive_summary.md` &mdash; the stakeholder-ready markdown brief.
+- `topic_method.json` &mdash; records which topic backend produced the artefacts.
 - `run_manifest.json`.
 
 ## `eda`

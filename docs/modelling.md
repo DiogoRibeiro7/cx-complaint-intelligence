@@ -33,6 +33,11 @@ and is covered by unit tests in
 
 ## Topic discovery
 
+Two backends ship side by side. The contract baseline is TF-IDF + NMF; the
+embedding backend is opt-in via `--topic-method embedding`.
+
+### NMF baseline (default)
+
 TF-IDF + NMF over the cleaned narratives. Default configuration:
 
 - `lowercase=True`, English stopwords, n-grams (1, 2), `min_df=5`, `max_df=0.85`.
@@ -47,6 +52,34 @@ NMF is chosen for two reasons:
 
 The pipeline produces a `topic_terms.csv` with the highest-weighted terms per
 topic and assigns each complaint to its dominant topic.
+
+### Embedding backend (opt-in)
+
+Selected via `cx-complaints analyze --topic-method embedding`. Implementation:
+
+1. **Encode** each cleaned narrative with `sentence-transformers/all-MiniLM-L6-v2`
+   (~80 MB, CPU-friendly, normalised output embeddings).
+2. **Cluster** the embeddings with `KMeans(n_clusters=n_topics, random_state=42)`.
+3. **Label** each cluster with class-based TF-IDF terms &mdash; the same
+   labelling trick BERTopic popularised. Each cluster's documents are
+   concatenated into one pseudo-document, a global TF-IDF is fit over the
+   pseudo-documents, and the highest-weighted terms per row become the topic
+   label.
+
+The output schema matches the NMF backend exactly (`topic_terms.csv`,
+`topic_id`, `topic_score`), so every downstream notebook and dashboard page
+works with either method. The `topic_method.json` artefact written next to
+the report records which backend produced the run.
+
+Notebook [11](https://github.com/diogoribeiro/cx-complaint-intelligence/blob/main/notebooks/11_nmf_vs_embedding_topics.ipynb)
+fits both methods on the same complaints and compares topic-term overlap,
+cluster cross-tab, ARI/NMI agreement, and per-topic risk concentration.
+
+!!! warning "Cost of ownership"
+    The embedding backend pulls `torch`, `transformers`, and `tokenizers` &mdash;
+    a multi-hundred-megabyte install. It also runs slower per complaint
+    (~30 s for 1,000 narratives on CPU). Keep NMF as the default unless the
+    embedding backend clearly outperforms it on your corpus.
 
 ## Supervised baselines
 

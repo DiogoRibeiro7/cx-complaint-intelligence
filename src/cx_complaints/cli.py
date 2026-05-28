@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -95,12 +96,30 @@ def fetch(
 @click.option("--topics", "n_topics", default=8, show_default=True, type=int)
 @click.option("--min-df", default=5, show_default=True, type=int)
 @click.option("--max-features", default=5000, show_default=True, type=int)
+@click.option(
+    "--topic-method",
+    type=click.Choice(["nmf", "embedding"], case_sensitive=False),
+    default="nmf",
+    show_default=True,
+    help=(
+        "Topic-model backend. 'nmf' is the lightweight baseline; "
+        "'embedding' uses sentence transformers + KMeans."
+    ),
+)
+@click.option(
+    "--embedding-model",
+    default="sentence-transformers/all-MiniLM-L6-v2",
+    show_default=True,
+    help="Sentence-transformer model name. Only used when --topic-method=embedding.",
+)
 def analyze(
     input_path: Path,
     output_dir: Path,
     n_topics: int,
     min_df: int,
     max_features: int,
+    topic_method: str,
+    embedding_model: str,
 ) -> None:
     """Run the full complaint intelligence analysis pipeline."""
     started_at = datetime.now(timezone.utc)
@@ -113,24 +132,60 @@ def analyze(
     # Topic modelling should use only records with real text. We then align the
     # assignments back to the original DataFrame index.
     text_mask = complaints["clean_text"].fillna("").astype(str).str.strip() != ""
-    topic_result = fit_nmf_topics(
-        complaints.loc[text_mask, "clean_text"],
-        n_topics=n_topics,
-        min_df=min_df,
-        max_features=max_features,
-    )
+
+    if topic_method.lower() == "embedding":
+        from cx_complaints.nlp.embedding_topics import fit_embedding_topics
+
+        embedding_result = fit_embedding_topics(
+            complaints.loc[text_mask, "clean_text"],
+            n_topics=n_topics,
+            encoder_name=embedding_model,
+        )
+        topic_terms = embedding_result.topic_terms
+        topic_assignments = embedding_result.assignments
+        resolved_method = "embedding"
+        resolved_model = embedding_result.encoder_name
+    else:
+        nmf_result = fit_nmf_topics(
+            complaints.loc[text_mask, "clean_text"],
+            n_topics=n_topics,
+            min_df=min_df,
+            max_features=max_features,
+        )
+        topic_terms = nmf_result.topic_terms
+        topic_assignments = nmf_result.assignments
+        resolved_method = "nmf"
+        resolved_model = "tfidf-nmf"
 
     complaints["topic_id"] = pd.NA
     complaints["topic_score"] = pd.NA
-    complaints.loc[text_mask, ["topic_id", "topic_score"]] = topic_result.assignments.to_numpy()
+    complaints.loc[text_mask, ["topic_id", "topic_score"]] = topic_assignments.to_numpy()
     complaints["topic_id"] = complaints["topic_id"].astype("Int64")
     complaints["topic_score"] = pd.to_numeric(complaints["topic_score"], errors="coerce")
 
     write_report_outputs(
         frame=complaints,
-        topic_terms=topic_result.topic_terms,
+        topic_terms=topic_terms,
         output_dir=output_dir,
     )
+
+    # Record which method produced these outputs so downstream tools can
+    # distinguish NMF runs from embedding runs in the same directory.
+    output_dir.mkdir(parents=True, exist_ok=True)
+    method_path = output_dir / "topic_method.json"
+    method_path.write_text(
+        json.dumps(
+            {
+                "method": resolved_method,
+                "model": resolved_model,
+                "n_topics": n_topics,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
     finished_at = datetime.now(timezone.utc)
     manifest = build_run_manifest(
         command="analyze",
@@ -143,6 +198,8 @@ def analyze(
             "topics": n_topics,
             "min_df": min_df,
             "max_features": max_features,
+            "topic_method": resolved_method,
+            "embedding_model": resolved_model if resolved_method == "embedding" else None,
         },
         output_paths=[
             output_dir / "complaint_scores.csv",
@@ -152,11 +209,14 @@ def analyze(
             output_dir / "company_summary.csv",
             output_dir / "topic_distribution.csv",
             output_dir / "executive_summary.md",
+            method_path,
         ],
     )
     write_run_manifest(manifest, output_dir / "run_manifest.json")
 
-    console.print(f"[green]Analysis complete. Outputs written to {output_dir}[/green]")
+    console.print(
+        f"[green]Analysis complete ({resolved_method}). Outputs written to {output_dir}[/green]"
+    )
 
 
 @main.command()

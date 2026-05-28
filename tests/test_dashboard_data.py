@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cx_complaints.dashboard.data import (
+from cx_complaints.dashboard.helpers import (
     apply_filters,
     build_executive_brief,
     priority_queue,

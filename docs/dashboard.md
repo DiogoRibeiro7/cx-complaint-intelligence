@@ -64,13 +64,16 @@ Requires `cx-complaints analyze` to have run first.
 
 The dashboard sits on top of two layers:
 
-- A **cached loader layer** (`cx_complaints.dashboard.data.load_complaints`,
-  `load_pipeline_outputs`) that wraps the notebook helpers with
-  `@st.cache_data` so the same parsed frame is reused across page interactions.
-- A **pure helper layer** (`apply_filters`, `priority_queue`, `weekly_kpis`,
-  `week_over_week`, `topic_weekly_movement`, `build_executive_brief`) that
-  takes DataFrames in and returns DataFrames or strings out, with no
-  Streamlit imports.  These helpers are unit-tested in isolation.
+- A **cached loader layer** in `cx_complaints.dashboard.loaders`
+  (`load_complaints`, `load_pipeline_outputs`) that wraps the notebook helpers
+  with `@st.cache_data` so the same parsed frame is reused across page
+  interactions. This module is the only one that imports `streamlit`.
+- A **pure helper layer** in `cx_complaints.dashboard.helpers` (`apply_filters`,
+  `priority_queue`, `weekly_kpis`, `week_over_week`, `topic_weekly_movement`,
+  `build_executive_brief`) that takes DataFrames in and returns DataFrames or
+  strings out, with no Streamlit imports. These helpers are unit-tested in
+  isolation and remain importable in lightweight installs that omit the
+  `dashboard` extra.
 
 The pages stay thin: each is roughly 100–150 lines of Streamlit calls plus a
 few Altair chart definitions.

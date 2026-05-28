@@ -8,6 +8,51 @@ on:
 
 jobs:
   test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-py${{ matrix.python-version }}-
+
+      - name: Install dependencies (dev + all extras)
+        run: poetry install --with dev --all-extras
+
+      - name: Ruff
+        run: poetry run ruff check .
+
+      - name: Mypy
+        run: poetry run mypy src tests scripts/mkdocs_hooks.py
+
+      - name: Pytest
+        run: poetry run pytest
+
+  lightweight-install:
+    name: Lightweight install (no extras)
     runs-on: ubuntu-latest
 
     steps:
@@ -26,22 +71,19 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Cache virtualenv
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            venv-${{ runner.os }}-
+      - name: Install core dependencies only (no dev, no extras)
+        run: poetry install --without dev --no-interaction
 
-      - name: Install dependencies
-        run: poetry install --with dev
-
-      - name: Ruff
-        run: poetry run ruff check .
-
-      - name: Mypy
-        run: poetry run mypy src tests
-
-      - name: Pytest
-        run: poetry run pytest
+      - name: Verify lightweight surface still imports
+        run: |
+          poetry run python -c "
+          from cx_complaints.cli import main
+          from cx_complaints.data.schema import normalize_complaints
+          from cx_complaints.modelling.risk import score_complaint_risk
+          from cx_complaints.nlp.topics import fit_nmf_topics
+          from cx_complaints.dashboard.helpers import apply_filters, priority_queue
+          # embedding_topics imports cleanly because sentence-transformers is only
+          # touched inside SentenceTransformerEncoder.encode().
+          from cx_complaints.nlp.embedding_topics import fit_embedding_topics
+          print('Lightweight install: core surface imports cleanly.')
+          "

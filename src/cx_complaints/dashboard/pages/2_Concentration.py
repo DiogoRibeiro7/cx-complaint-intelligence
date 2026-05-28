@@ -8,7 +8,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from cx_complaints.dashboard.data import apply_filters, load_complaints
+from cx_complaints.dashboard.helpers import apply_filters
+from cx_complaints.dashboard.loaders import load_complaints
 from cx_complaints.reports.notebook_utils import concentration_table
 
 st.set_page_config(page_title="Concentration — CX Complaint Intelligence", layout="wide")

@@ -13,7 +13,17 @@ a fresh clone in under a minute.
 ```bash
 git clone https://github.com/diogoribeiro/cx-complaint-intelligence
 cd cx-complaint-intelligence
-poetry install --with dev
+
+# Light install: CLI + notebooks + NMF topic backend
+poetry install
+
+# Add features as needed
+poetry install --extras dashboard           # Streamlit dashboard
+poetry install --extras embeddings          # sentence-transformers + torch
+poetry install --extras all                 # everything
+
+# Contributors
+poetry install --with dev --extras all
 ```
 
 ## Reproduce the canonical outputs

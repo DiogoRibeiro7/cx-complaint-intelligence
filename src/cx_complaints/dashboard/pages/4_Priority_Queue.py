@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from cx_complaints.dashboard.data import apply_filters, load_complaints, priority_queue
+from cx_complaints.dashboard.helpers import apply_filters, priority_queue
+from cx_complaints.dashboard.loaders import load_complaints
 
 st.set_page_config(page_title="Priority Queue — CX Complaint Intelligence", layout="wide")
 st.title("Priority queue")

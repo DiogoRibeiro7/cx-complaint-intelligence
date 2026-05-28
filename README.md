@@ -50,10 +50,24 @@ The first implementation supports:
 
 ## Installation
 
-This project uses Poetry.
+This project uses Poetry. The base install is light; heavy ML and UI
+dependencies are opt-in via extras:
 
 ```bash
-poetry install --with dev
+# Lightweight: CLI + notebooks + NMF topic backend
+poetry install
+
+# Add the Streamlit dashboard
+poetry install --extras dashboard
+
+# Add the embedding topic backend (sentence-transformers + torch, ~1 GB)
+poetry install --extras embeddings
+
+# Everything
+poetry install --extras all
+
+# Contributors: dev tools (ruff, mypy, pytest, mkdocs, …) on top of any of the above
+poetry install --with dev --extras all
 ```
 
 Run quality checks:

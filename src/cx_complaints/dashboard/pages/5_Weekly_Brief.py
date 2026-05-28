@@ -5,14 +5,14 @@ from __future__ import annotations
 import altair as alt
 import streamlit as st
 
-from cx_complaints.dashboard.data import (
+from cx_complaints.dashboard.helpers import (
     build_executive_brief,
-    load_pipeline_outputs,
     priority_queue,
     topic_weekly_movement,
     week_over_week,
     weekly_kpis,
 )
+from cx_complaints.dashboard.loaders import load_pipeline_outputs
 
 st.set_page_config(page_title="Weekly Brief — CX Complaint Intelligence", layout="wide")
 st.title("Weekly brief")

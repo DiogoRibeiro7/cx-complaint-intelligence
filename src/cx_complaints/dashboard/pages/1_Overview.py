@@ -5,7 +5,8 @@ from __future__ import annotations
 import altair as alt
 import streamlit as st
 
-from cx_complaints.dashboard.data import apply_filters, load_complaints
+from cx_complaints.dashboard.helpers import apply_filters
+from cx_complaints.dashboard.loaders import load_complaints
 from cx_complaints.reports.notebook_utils import kpi_table, monthly_summary
 
 st.set_page_config(page_title="Overview — CX Complaint Intelligence", layout="wide")

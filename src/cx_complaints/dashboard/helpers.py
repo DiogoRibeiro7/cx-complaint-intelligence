@@ -1,16 +1,8 @@
-"""Data access and filtering primitives for the Streamlit dashboard.
+"""Pure-Python helpers for the Streamlit dashboard.
 
-The functions split into two groups:
-
-- **Pure helpers** (``priority_queue``, ``apply_filters``, ``weekly_kpis``, ...)
-  take a DataFrame in and return a DataFrame out. They have no Streamlit
-  dependency, which makes them trivially testable.
-- **Cached loaders** (``load_complaints``, ``load_pipeline_outputs``) wrap the
-  notebook utility loaders with ``@st.cache_data`` so the bundled sample is not
-  re-parsed on every interaction.
-
-Pages should call the cached loaders first, then pass the resulting frames
-through the pure helpers.
+These functions have no Streamlit dependency, which makes them importable and
+unit-testable without ``streamlit`` installed.  The Streamlit-cached loaders
+live in :mod:`cx_complaints.dashboard.loaders`; the pages import from both.
 """
 
 from __future__ import annotations
@@ -19,18 +11,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
-import streamlit as st
 
 from cx_complaints.reports.notebook_utils import (
     NotebookContext,
     find_project_root,
-    topic_labels,
-)
-from cx_complaints.reports.notebook_utils import (
-    load_complaints as _load_complaints,
-)
-from cx_complaints.reports.notebook_utils import (
-    load_pipeline_outputs as _load_pipeline_outputs,
 )
 
 WEAK_RESPONSE_VALUES: tuple[str, ...] = (
@@ -65,7 +49,7 @@ def dashboard_context() -> DashboardContext:
     )
 
 
-def _as_notebook_context(ctx: DashboardContext) -> NotebookContext:
+def as_notebook_context(ctx: DashboardContext) -> NotebookContext:
     """Adapt a dashboard context to the shape the notebook loaders expect."""
     return NotebookContext(
         notebook_id="dashboard",
@@ -75,20 +59,6 @@ def _as_notebook_context(ctx: DashboardContext) -> NotebookContext:
         pipeline_outputs=ctx.pipeline_outputs,
         artefact_dir=ctx.project_root / "reports" / "notebook" / "dashboard",
     )
-
-
-@st.cache_data(show_spinner="Loading complaints sample…")
-def load_complaints() -> pd.DataFrame:
-    """Load, normalise, clean, and score the bundled complaints sample."""
-    return _load_complaints(_as_notebook_context(dashboard_context()))
-
-
-@st.cache_data(show_spinner="Loading pipeline outputs…")
-def load_pipeline_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load the CLI ``analyze`` outputs plus a topic-label lookup."""
-    scores, terms = _load_pipeline_outputs(_as_notebook_context(dashboard_context()))
-    labels = topic_labels(terms, top_n=4)
-    return scores, terms, labels
 
 
 def resolve_topic_label(

@@ -6,7 +6,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from cx_complaints.dashboard.data import load_pipeline_outputs, resolve_topic_label
+from cx_complaints.dashboard.helpers import resolve_topic_label
+from cx_complaints.dashboard.loaders import load_pipeline_outputs
 
 st.set_page_config(page_title="Topics — CX Complaint Intelligence", layout="wide")
 st.title("Topics")

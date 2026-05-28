@@ -10,11 +10,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from cx_complaints.dashboard.data import (
-    dashboard_context,
-    load_complaints,
-    load_pipeline_outputs,
-)
+from cx_complaints.dashboard.helpers import dashboard_context
+from cx_complaints.dashboard.loaders import load_complaints, load_pipeline_outputs
 
 st.set_page_config(
     page_title="CX Complaint Intelligence",

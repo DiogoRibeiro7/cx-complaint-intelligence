@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from cx_complaints.data.schema import parse_date_series
 from cx_complaints.reports.notebook_utils import (
     NotebookContext,
     find_project_root,
@@ -149,7 +150,7 @@ def weekly_kpis(scores: pd.DataFrame) -> pd.DataFrame:
         )
 
     working = scores.copy()
-    working["date_received"] = pd.to_datetime(working["date_received"], errors="coerce")
+    working["date_received"] = parse_date_series(working["date_received"])
     working = working.dropna(subset=["date_received"])
     working["week"] = working["date_received"].dt.to_period("W").astype(str)
 
@@ -229,7 +230,7 @@ def topic_weekly_movement(
         )
 
     dated["topic_id"] = dated["topic_id"].astype(int)
-    dated["date_received"] = pd.to_datetime(dated["date_received"], errors="coerce")
+    dated["date_received"] = parse_date_series(dated["date_received"])
     dated = dated.dropna(subset=["date_received"])
     dated["week"] = dated["date_received"].dt.to_period("W").astype(str)
 

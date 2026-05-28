@@ -5369,4 +5369,4 @@ embeddings = ["sentence-transformers", "torch"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "80600c14c44fec6bfcfcd6a4eec6e9c038f1c8eb68e86b627a8fda46d233cc15"
+content-hash = "496845afa384acd46e7b6b988b15b4994f03f0e102d7aec7b57cfaaa295de1fb"

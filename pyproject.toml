@@ -12,6 +12,12 @@ python = ">=3.10,<3.13"
 pandas = ">=2.2.0,<3.0.0"
 numpy = ">=1.26.0,<3.0.0"
 requests = ">=2.31.0,<3.0.0"
+# Pin the requests transitive deps explicitly so poetry's resolver locks
+# them inside the compatibility ranges requests checks for at import time.
+# Without these pins, an upstream urllib3 / charset-normalizer bump could
+# trigger a RequestsDependencyWarning at startup.
+urllib3 = ">=1.21.1,<3.0.0"
+charset-normalizer = ">=2.0.0,<4.0.0"
 scikit-learn = ">=1.4.0,<2.0.0"
 scipy = ">=1.11.0,<2.0.0"
 click = ">=8.1.7,<9.0.0"
@@ -75,3 +81,11 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 addopts = "-q --cov=cx_complaints --cov-report=term-missing"
 testpaths = ["tests"]
+# Treat the warnings that signal environment drift / silent data bugs as
+# hard failures.  Other warnings stay at "default" so upstream deprecations
+# do not break CI when we cannot fix the upstream.
+filterwarnings = [
+    "error::requests.exceptions.RequestsDependencyWarning",
+    "error:Converting to PeriodArray/Index representation will drop timezone information:UserWarning",
+    "error:Could not infer format:UserWarning",
+]

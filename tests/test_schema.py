@@ -3,7 +3,11 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cx_complaints.data.schema import CANONICAL_COLUMNS, normalize_complaints
+from cx_complaints.data.schema import (
+    CANONICAL_COLUMNS,
+    normalize_complaints,
+    parse_date_series,
+)
 
 
 def test_normalize_complaints_accepts_csv_style_columns() -> None:
@@ -89,3 +93,57 @@ def test_normalize_complaints_maps_has_narrative_to_nullable_boolean() -> None:
     assert pd.isna(result.loc[3, "has_narrative"])
     assert pd.isna(result.loc[4, "has_narrative"])
     assert not result.loc[5, "has_narrative"]
+
+
+def test_parse_date_series_parses_iso_date_only() -> None:
+    """``YYYY-MM-DD`` strings should go through the strict ISO fast path."""
+    result = parse_date_series(pd.Series(["2024-01-31", "2024-02-15"]))
+
+    assert str(result.iloc[0].date()) == "2024-01-31"
+    assert str(result.iloc[1].date()) == "2024-02-15"
+    # Output must be tz-naive so downstream .dt.to_period() does not warn.
+    assert result.dt.tz is None
+
+
+def test_parse_date_series_normalises_mixed_offsets_to_utc() -> None:
+    """ISO timestamps with different offsets land on naive UTC wall-clocks."""
+    result = parse_date_series(
+        pd.Series(["2024-06-21T12:00:00-05:00", "2024-06-21T12:00:00+02:00"])
+    )
+
+    assert result.dt.tz is None
+    # 12:00 in -05:00 is 17:00 UTC; 12:00 in +02:00 is 10:00 UTC.
+    assert result.iloc[0] == pd.Timestamp("2024-06-21 17:00:00")
+    assert result.iloc[1] == pd.Timestamp("2024-06-21 10:00:00")
+
+
+def test_parse_date_series_coerces_outliers_via_fallback() -> None:
+    """Non-ISO inputs land on NaT, but the parser does not raise."""
+    result = parse_date_series(pd.Series(["2024-01-31", "not-a-date", "", None]))
+
+    assert str(result.iloc[0].date()) == "2024-01-31"
+    assert pd.isna(result.iloc[1])
+    assert pd.isna(result.iloc[2])
+    assert pd.isna(result.iloc[3])
+
+
+def test_parse_date_series_accepts_us_style_dates_via_fallback() -> None:
+    """``MM/DD/YYYY`` is not ISO; the flexible fallback must catch it."""
+    result = parse_date_series(pd.Series(["01/31/2024"]))
+
+    assert str(result.iloc[0].date()) == "2024-01-31"
+
+
+def test_parse_date_series_output_supports_period_bucketing() -> None:
+    """The schema-wide guarantee: ``.dt.to_period`` never warns about tz."""
+    import warnings
+
+    series = parse_date_series(
+        pd.Series(["2024-06-21T12:00:00-05:00", "2024-06-28T03:00:00+00:00"])
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        weekly = series.dt.to_period("W").astype(str)
+
+    assert len(weekly) == 2

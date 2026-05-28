@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 
 import pandas as pd
@@ -69,6 +70,42 @@ TEXT_COLUMNS: tuple[str, ...] = (
 )
 
 
+def parse_date_series(values: pd.Series) -> pd.Series:
+    """Parse a column of date-like strings into tz-naive ``datetime64[ns]``.
+
+    The parser uses a two-stage strategy:
+
+    1. **Strict ISO-8601 fast path** &mdash; covers both ``YYYY-MM-DD`` and full
+       ISO timestamps with offsets (the two shapes CFPB emits). Anything that
+       does not match falls through with ``NaT``.
+    2. **Flexible fallback** &mdash; runs ``pd.to_datetime`` without a format on
+       just the rows that failed the strict path. ``utc=True`` forces a
+       single timezone so mixed-offset inputs do not produce warnings.
+
+    The result is always tz-naive (timezone is normalised to UTC and then
+    dropped). This keeps period bucketing (``.dt.to_period("W")``,
+    ``.dt.to_period("M")``) deterministic and warning-free downstream.
+    """
+    strict = pd.to_datetime(values, format="ISO8601", errors="coerce", utc=True)
+    non_null_values = values.notna() & (values.astype("string").str.strip() != "")
+    failed_mask = strict.isna() & non_null_values
+    if failed_mask.any():
+        # Suppress pandas' "Could not infer format" UserWarning &mdash; the
+        # fallback is intentionally format-less because the strict path has
+        # already filtered out the easy cases.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Could not infer format",
+                category=UserWarning,
+            )
+            fallback = pd.to_datetime(values[failed_mask], errors="coerce", utc=True)
+        strict.loc[failed_mask] = fallback
+    # tz_localize(None) on a UTC-aware Series strips the tz attribute while
+    # keeping the UTC wall-clock value &mdash; callers see naive UTC timestamps.
+    return strict.dt.tz_localize(None)
+
+
 def normalize_complaints(frame: pd.DataFrame) -> pd.DataFrame:
     """Normalise CFPB complaint data into a stable internal schema.
 
@@ -88,7 +125,7 @@ def normalize_complaints(frame: pd.DataFrame) -> pd.DataFrame:
     output = output.loc[:, list(CANONICAL_COLUMNS)]
 
     for column in DATE_COLUMNS:
-        output[column] = pd.to_datetime(output[column], errors="coerce")
+        output[column] = parse_date_series(output[column])
 
     for column in TEXT_COLUMNS:
         output[column] = output[column].astype("string").str.strip()

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import altair as alt
-import pandas as pd
 import streamlit as st
 
 from cx_complaints.dashboard.helpers import resolve_topic_label
 from cx_complaints.dashboard.loaders import load_pipeline_outputs
+from cx_complaints.data.schema import parse_date_series
 
 st.set_page_config(page_title="Topics — CX Complaint Intelligence", layout="wide")
 st.title("Topics")
@@ -126,9 +126,7 @@ st.dataframe(top_samples, hide_index=True, use_container_width=True)
 # Topic trend over time ------------------------------------------------------
 st.subheader("Topic share over time")
 trend_source = scores.copy()
-trend_source["date_received"] = pd.to_datetime(
-    trend_source["date_received"], errors="coerce"
-)
+trend_source["date_received"] = parse_date_series(trend_source["date_received"])
 trend_source = trend_source.dropna(subset=["date_received"])
 trend_source["month"] = trend_source["date_received"].dt.to_period("M").astype(str)
 

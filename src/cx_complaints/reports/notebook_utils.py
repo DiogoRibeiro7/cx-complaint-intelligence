@@ -32,7 +32,7 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from cx_complaints.data.schema import normalize_complaints
+from cx_complaints.data.schema import normalize_complaints, parse_date_series
 from cx_complaints.features.text_features import add_text_features
 from cx_complaints.modelling.risk import score_complaint_risk
 from cx_complaints.preprocessing.text import add_clean_text_column
@@ -351,7 +351,7 @@ def monthly_summary(frame: pd.DataFrame, *, date_column: str = "date_received") 
     notebook instead.
     """
     dated = frame.copy()
-    dated[date_column] = pd.to_datetime(dated[date_column], errors="coerce")
+    dated[date_column] = parse_date_series(dated[date_column])
     dated = dated.dropna(subset=[date_column])
     if dated.empty:
         return pd.DataFrame(
